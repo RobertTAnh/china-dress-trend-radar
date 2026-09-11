@@ -16,6 +16,8 @@ class CrawlProgress:
     current_keyword: str | None = None
     request_count: int = 0
     result_count: int = 0
+    raw_result_count: int = 0
+    filtered_result_count: int = 0
     new_video_count: int = 0
     last_error: str | None = None
     warning: str | None = None

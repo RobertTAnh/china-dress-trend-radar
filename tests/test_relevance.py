@@ -22,6 +22,11 @@ def test_requires_a_commercial_product_term():
     assert not is_relevant_video("今天分享高级感穿搭，真的很好看")
 
 
+def test_accepts_broader_commercial_dress_terms():
+    assert is_relevant_video("今天试穿一条很显瘦的裙子")
+    assert is_relevant_video("小众女装分享，约会穿搭推荐")
+
+
 def test_keyword_exact_match_improves_score():
     caption = "小众设计感连衣裙女，上身显瘦"
     base = relevance_score(caption)

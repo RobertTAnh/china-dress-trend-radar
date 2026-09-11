@@ -29,6 +29,9 @@ EXCLUDED_TERMS = {
 
 PRODUCT_TERMS = {
     "连衣裙",
+    "裙子",
+    "礼服",
+    "女装",
     "吊带裙",
     "小黑裙",
     "抹胸裙",
@@ -96,6 +99,6 @@ def is_relevant_video(
     caption: str | None,
     hashtags: Iterable[str] | dict | None = None,
     search_keyword: str | None = None,
-    minimum_score: int = 30,
+    minimum_score: int = 20,
 ) -> bool:
     return relevance_score(caption, hashtags, search_keyword) >= minimum_score

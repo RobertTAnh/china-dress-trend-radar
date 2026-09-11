@@ -167,6 +167,8 @@ async def run_crawl(
         keywords = db.query(Keyword).filter(Keyword.active.is_(True)).order_by(Keyword.id).all()
         missing_views: list[NormalizedVideo] = []
         seen_ids: set[str] = set()
+        raw_result_count = 0
+        filtered_result_count = 0
 
         for keyword in keywords:
             progress_store.update(current_keyword=keyword.keyword)
@@ -188,11 +190,13 @@ async def run_crawl(
                     budget.record_search()
                     progress_store.update(request_count=budget.run_requests)
                     for item in page.videos:
+                        raw_result_count += 1
                         if not is_relevant_video(
                             item.caption,
                             item.hashtags,
                             search_keyword=keyword.keyword,
                         ):
+                            filtered_result_count += 1
                             logger.info(
                                 "Filtered irrelevant result video_id=%s keyword_id=%s",
                                 item.external_video_id,
@@ -212,6 +216,8 @@ async def run_crawl(
                         del video
                     progress_store.update(
                         result_count=run.result_count,
+                        raw_result_count=raw_result_count,
+                        filtered_result_count=filtered_result_count,
                         new_video_count=run.new_video_count,
                         request_count=budget.run_requests,
                     )
@@ -286,11 +292,20 @@ async def run_crawl(
         if budget.warning and run.status == "budget_stopped":
             run.error_message = budget.warning
         db.commit()
+        logger.info(
+            "Crawl result summary raw=%s filtered=%s accepted=%s new=%s",
+            raw_result_count,
+            filtered_result_count,
+            run.result_count,
+            run.new_video_count,
+        )
         progress_store.update(
             running=False,
             status=run.status,
             request_count=run.request_count,
             result_count=run.result_count,
+            raw_result_count=raw_result_count,
+            filtered_result_count=filtered_result_count,
             new_video_count=run.new_video_count,
             warning=budget.warning,
             last_error=run.error_message,

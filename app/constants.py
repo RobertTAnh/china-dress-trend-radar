@@ -1,14 +1,14 @@
 DEFAULT_KEYWORDS = [
-    ("轻礼服连衣裙女", "Đầm tiệc nhẹ nữ"),
-    ("小众设计感连衣裙女", "Đầm nữ thiết kế ít đụng hàng"),
-    ("生日战袍连衣裙女", "Đầm nữ nổi bật mặc sinh nhật"),
-    ("法式收腰连衣裙女", "Đầm nữ phong cách Pháp nhấn eo"),
-    ("一字肩花朵连衣裙", "Đầm trễ vai đính hoa"),
-    ("抹胸蝴蝶结连衣裙", "Đầm cúp ngực đính nơ"),
-    ("吊带网纱长裙女", "Đầm hai dây dài phối voan"),
-    ("气质小黑裙女", "Đầm đen nữ tính thanh lịch"),
-    ("梨形身材显瘦连衣裙", "Đầm tôn dáng quả lê"),
-    ("小个子显高连衣裙", "Đầm giúp người thấp trông cao"),
+    ("轻礼服女", "Đầm tiệc nhẹ nữ"),
+    ("小众连衣裙", "Đầm nữ ít đụng hàng"),
+    ("生日战袍", "Đầm nổi bật mặc sinh nhật"),
+    ("法式连衣裙", "Đầm nữ phong cách Pháp"),
+    ("一字肩连衣裙", "Đầm trễ vai"),
+    ("抹胸连衣裙", "Đầm cúp ngực"),
+    ("吊带长裙", "Đầm hai dây dài"),
+    ("气质小黑裙", "Đầm đen nữ tính thanh lịch"),
+    ("梨形身材连衣裙", "Đầm cho dáng quả lê"),
+    ("小个子连衣裙", "Đầm cho người thấp"),
 ]
 
 LEGACY_KEYWORDS = {
@@ -22,6 +22,16 @@ LEGACY_KEYWORDS = {
     "小个子礼服",
     "新中式礼服",
     "年会礼服",
+    "轻礼服连衣裙女",
+    "小众设计感连衣裙女",
+    "生日战袍连衣裙女",
+    "法式收腰连衣裙女",
+    "一字肩花朵连衣裙",
+    "抹胸蝴蝶结连衣裙",
+    "吊带网纱长裙女",
+    "气质小黑裙女",
+    "梨形身材显瘦连衣裙",
+    "小个子显高连衣裙",
 }
 
 SETTING_KEYS = {
