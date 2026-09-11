@@ -8,6 +8,17 @@ from collections.abc import Iterable
 # searches for 礼服 tend to return.
 EXCLUDED_TERMS = {
     "明星",
+    "演员",
+    "艺人",
+    "追星",
+    "娱乐",
+    "盛典",
+    "追剧",
+    "品牌活动",
+    "选美",
+    "世界小姐",
+    "亮相",
+    "歌会",
     "红毯",
     "高定",
     "婚纱",
@@ -15,6 +26,8 @@ EXCLUDED_TERMS = {
     "敬酒服",
     "订婚",
     "婚礼",
+    "结婚",
+    "伴娘",
     "汉服",
     "旗袍",
     "秀场",
@@ -25,6 +38,15 @@ EXCLUDED_TERMS = {
     "儿童",
     "租赁",
     "礼服馆",
+}
+
+EXCLUDED_AUTHOR_TERMS = {
+    "娱乐",
+    "追星",
+    "娱记",
+    "明星",
+    "影视",
+    "剧综",
 }
 
 PRODUCT_TERMS = {
@@ -62,7 +84,19 @@ STYLE_TERMS = {
     "气质",
 }
 
-SHOPPING_TERMS = {"穿搭", "试穿", "上身", "新款", "推荐", "分享", "测评"}
+SHOPPING_TERMS = {
+    "穿搭",
+    "试穿",
+    "上身",
+    "新款",
+    "推荐",
+    "分享",
+    "测评",
+    "商品",
+    "版型",
+    "面料",
+    "显瘦",
+}
 
 
 def relevance_text(caption: str | None, hashtags: Iterable[str] | dict | None = None) -> str:
@@ -78,9 +112,13 @@ def relevance_score(
     caption: str | None,
     hashtags: Iterable[str] | dict | None = None,
     search_keyword: str | None = None,
+    author_name: str | None = None,
 ) -> int:
     text = relevance_text(caption, hashtags)
-    if any(term in text for term in EXCLUDED_TERMS):
+    author = (author_name or "").lower()
+    if any(term in text for term in EXCLUDED_TERMS) or any(
+        term in author for term in EXCLUDED_AUTHOR_TERMS
+    ):
         return 0
 
     score = 0
@@ -99,6 +137,7 @@ def is_relevant_video(
     caption: str | None,
     hashtags: Iterable[str] | dict | None = None,
     search_keyword: str | None = None,
+    author_name: str | None = None,
     minimum_score: int = 20,
 ) -> bool:
-    return relevance_score(caption, hashtags, search_keyword) >= minimum_score
+    return relevance_score(caption, hashtags, search_keyword, author_name) >= minimum_score

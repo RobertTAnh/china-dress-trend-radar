@@ -51,7 +51,11 @@ def load_video_cards(
 
     cards: list[VideoCard] = []
     for video in query.all():
-        if not is_relevant_video(video.caption, video.hashtags_json):
+        if not is_relevant_video(
+            video.caption,
+            video.hashtags_json,
+            author_name=video.author_name,
+        ):
             continue
         trend = score_snapshots(video, list(video.snapshots))
         if trending_only:

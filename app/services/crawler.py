@@ -227,11 +227,13 @@ async def run_crawl(
                             item.caption,
                             item.hashtags,
                             search_keyword=keyword.keyword,
+                            author_name=item.author_name,
                         )
                         if not is_relevant_video(
                             item.caption,
                             item.hashtags,
                             search_keyword=keyword.keyword,
+                            author_name=item.author_name,
                         ):
                             filtered_result_count += 1
                             keyword_filtered += 1
