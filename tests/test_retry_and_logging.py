@@ -65,3 +65,36 @@ def test_redact_api_key_from_logs(caplog):
     assert "super-secret-token-xyz" not in text
     assert "[REDACTED]" in text
     assert "super-secret-token-xyz" not in redact_secrets("Bearer super-secret-token-xyz")
+
+
+@pytest.mark.asyncio
+async def test_statistics_retries_400_then_splits_into_chunks():
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = request.url.params.get("aweme_ids", "")
+        calls.append(query)
+        ids = query.split(",") if query else []
+        if len(ids) > 10:
+            return httpx.Response(400, json={"message": "retry"})
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "statistics_list": [
+                        {"aweme_id": item, "play_count": 100} for item in ids
+                    ]
+                }
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(
+        base_url="https://api.tikhub.io", transport=transport
+    ) as client:
+        adapter = _adapter(client)
+        payload = await adapter.fetch_statistics([str(index) for index in range(23)])
+
+    assert len(calls) == 6  # Three full attempts, followed by 10 + 10 + 3.
+    assert adapter.last_statistics_request_count == 3
+    assert len(payload["_chunk_payloads"]) == 3

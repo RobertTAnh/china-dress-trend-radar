@@ -346,11 +346,15 @@ async def run_crawl(
                     logger.exception("Statistics enrichment failed")
                     progress_store.update(last_error=str(exc))
                     continue
-                # One billed call covers the whole batch (up to 50 videos).
-                budget.record_stats()
+                # Normally one call covers the batch. A TikHub HTTP 400 may
+                # trigger successful fallback calls in chunks of 10.
+                for _ in range(max(adapter.last_statistics_request_count, 1)):
+                    budget.record_stats()
                 progress_store.update(request_count=budget.run_requests)
+                payloads = payload.get("_chunk_payloads", [payload])
                 for item in batch:
-                    merge_statistics(item, payload)
+                    for stats_payload in payloads:
+                        merge_statistics(item, stats_payload)
                     upsert_video(db, item, None, captured_at)
                 db.commit()
             if detail_candidates and budget.stopped:

@@ -49,6 +49,7 @@ class TikHubAdapter:
         self.rate_limiter = rate_limiter or AsyncRateLimiter(
             self.settings.internal_rate_limit_rps
         )
+        self.last_statistics_request_count = 0
 
     @property
     def search_path(self) -> str:
@@ -107,11 +108,51 @@ class TikHubAdapter:
 
     async def fetch_statistics(self, aweme_ids: list[str]) -> dict[str, Any]:
         ids = [item for item in aweme_ids if item][:50]
+        self.last_statistics_request_count = 0
         if not ids:
             return {"code": 200, "data": {}}
         if self.mock_mode:
+            self.last_statistics_request_count = 1
             return mock_statistics(ids)
-        return await self._fetch_statistics_once(ids)
+
+        last_error: TikHubClientError | None = None
+        # TikHub occasionally returns a transient HTTP 400 for a valid bulk
+        # request. Retry the full batch twice before falling back to chunks.
+        for attempt in range(1, 4):
+            try:
+                payload = await self._fetch_statistics_once(ids)
+                self.last_statistics_request_count = 1
+                return payload
+            except TikHubClientError as exc:
+                if exc.status_code != 400:
+                    raise
+                last_error = exc
+                logger.warning(
+                    "TikHub statistics batch rejected (attempt %s/3, size=%s)",
+                    attempt,
+                    len(ids),
+                )
+                if attempt < 3:
+                    await asyncio.sleep(self._backoff(attempt))
+
+        chunk_payloads: list[dict[str, Any]] = []
+        logger.warning("Retrying TikHub statistics in chunks of 10 (size=%s)", len(ids))
+        for index in range(0, len(ids), 10):
+            chunk = ids[index : index + 10]
+            try:
+                chunk_payloads.append(await self._fetch_statistics_once(chunk))
+                self.last_statistics_request_count += 1
+            except TikHubClientError as exc:
+                logger.warning(
+                    "TikHub statistics chunk skipped start=%s size=%s status=%s",
+                    index,
+                    len(chunk),
+                    exc.status_code,
+                )
+        if not chunk_payloads:
+            assert last_error is not None
+            raise last_error
+        return {"_chunk_payloads": chunk_payloads}
 
     async def _fetch_statistics_once(self, ids: list[str]) -> dict[str, Any]:
         # Keep comma unescaped; some TikHub gateways reject %2C.
@@ -123,12 +164,14 @@ class TikHubAdapter:
         if not aweme_ids:
             return
         payload = await self.fetch_statistics(aweme_ids)
+        payloads = payload.get("_chunk_payloads", [payload])
         videos = page_or_videos.videos if isinstance(page_or_videos, SearchPage) else page_or_videos
         by_id = {video.external_video_id: video for video in videos}
         for aweme_id in aweme_ids:
             video = by_id.get(aweme_id)
             if video:
-                merge_statistics(video, payload)
+                for item in payloads:
+                    merge_statistics(video, item)
 
     async def _request(
         self,
