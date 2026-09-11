@@ -23,6 +23,8 @@ release/
 .idea/
 .vscode/
 *.log
+logs/*
+!logs/.gitkeep
 TIKHUB_API_KEY
 .DS_Store
 Thumbs.db

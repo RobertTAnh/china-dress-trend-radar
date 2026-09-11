@@ -10,7 +10,7 @@ from app.config import Settings, get_settings
 from app.models import CrawlRun, Keyword, Snapshot, Video, VideoKeyword
 from app.services.budget import BudgetGuard
 from app.services.progress import progress_store
-from app.services.relevance import is_relevant_video
+from app.services.relevance import is_relevant_video, relevance_score
 from app.services.seed_defaults import get_setting, get_setting_bool, get_setting_int
 from app.tikhub.adapter import TikHubAdapter, TikHubAuthError, TikHubClientError
 from app.tikhub.normalizer import NormalizedVideo, merge_statistics, needs_view_enrichment
@@ -162,6 +162,17 @@ async def run_crawl(
     max_detail = get_setting_int(db, "max_detail_videos_per_run", settings.max_detail_videos_per_run)
     # Keep budget for play_count enrichment (2 aweme_ids per stats request).
     stats_reserve = min(max((max_detail + 1) // 2, 1), max(budget.remaining() // 3, 1))
+    logger.info(
+        "Crawl started run_id=%s mock=%s pages_per_keyword=%s max_requests=%s "
+        "publish_time=%s sort_type=%s content_type=%s",
+        run.id,
+        settings.mock_mode,
+        pages,
+        budget.max_run,
+        settings.search_publish_time,
+        settings.search_sort_type,
+        settings.search_content_type,
+    )
 
     try:
         keywords = db.query(Keyword).filter(Keyword.active.is_(True)).order_by(Keyword.id).all()
@@ -173,8 +184,17 @@ async def run_crawl(
         for keyword in keywords:
             progress_store.update(current_keyword=keyword.keyword)
             cursor, search_id, backtrace = 0, "", ""
+            keyword_raw = 0
+            keyword_filtered = 0
+            keyword_accepted = 0
+            logger.info(
+                "Keyword started run_id=%s keyword_id=%s keyword=%s",
+                run.id,
+                keyword.id,
+                keyword.keyword,
+            )
             try:
-                for _page in range(pages):
+                for page_number in range(1, pages + 1):
                     # Leave room for play_count stats after at least one search request.
                     if budget.remaining() <= stats_reserve and budget.run_requests > 0:
                         break
@@ -189,22 +209,62 @@ async def run_crawl(
                     )
                     budget.record_search()
                     progress_store.update(request_count=budget.run_requests)
+                    logger.info(
+                        "Search page run_id=%s keyword=%s page=%s cursor=%s "
+                        "raw=%s has_more=%s next_cursor=%s",
+                        run.id,
+                        keyword.keyword,
+                        page_number,
+                        cursor,
+                        len(page.videos),
+                        page.has_more,
+                        page.cursor,
+                    )
                     for item in page.videos:
                         raw_result_count += 1
+                        keyword_raw += 1
+                        score = relevance_score(
+                            item.caption,
+                            item.hashtags,
+                            search_keyword=keyword.keyword,
+                        )
                         if not is_relevant_video(
                             item.caption,
                             item.hashtags,
                             search_keyword=keyword.keyword,
                         ):
                             filtered_result_count += 1
+                            keyword_filtered += 1
                             logger.info(
-                                "Filtered irrelevant result video_id=%s keyword_id=%s",
+                                "Video filtered run_id=%s keyword=%s video_id=%s "
+                                "relevance=%s caption=%r",
+                                run.id,
+                                keyword.keyword,
                                 item.external_video_id,
-                                keyword.id,
+                                score,
+                                (item.caption or "")[:240],
                             )
                             continue
                         run.result_count += 1
+                        keyword_accepted += 1
                         video, created = upsert_video(db, item, keyword, captured_at)
+                        logger.info(
+                            "Video accepted run_id=%s keyword=%s video_id=%s new=%s "
+                            "relevance=%s views=%s likes=%s comments=%s shares=%s "
+                            "collects=%s caption=%r url=%s",
+                            run.id,
+                            keyword.keyword,
+                            item.external_video_id,
+                            created,
+                            score,
+                            item.metrics.view_count,
+                            item.metrics.like_count,
+                            item.metrics.comment_count,
+                            item.metrics.share_count,
+                            item.metrics.collect_count,
+                            (item.caption or "")[:240],
+                            item.source_url,
+                        )
                         if created:
                             run.new_video_count += 1
                         if (
@@ -237,6 +297,15 @@ async def run_crawl(
                 logger.exception("Keyword failed: id=%s", keyword.id)
                 progress_store.update(last_error=str(exc))
                 run.error_message = str(exc)
+            finally:
+                logger.info(
+                    "Keyword finished run_id=%s keyword=%s raw=%s filtered=%s accepted=%s",
+                    run.id,
+                    keyword.keyword,
+                    keyword_raw,
+                    keyword_filtered,
+                    keyword_accepted,
+                )
 
         if run.status == "running":
             progress_store.update(current_keyword="(đang cập nhật lượt xem)")
