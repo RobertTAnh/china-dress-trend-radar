@@ -23,6 +23,13 @@ class TikHubAuthError(Exception):
     pass
 
 
+class TikHubClientError(Exception):
+    def __init__(self, message: str, status_code: int | None = None, body: str = "") -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
+
+
 class TikHubBudgetSignal(Exception):
     pass
 
@@ -100,10 +107,49 @@ class TikHubAdapter:
 
     async def fetch_statistics(self, aweme_ids: list[str]) -> dict[str, Any]:
         ids = [item for item in aweme_ids if item][:2]
+        if not ids:
+            return {"code": 200, "data": {}}
         if self.mock_mode:
             return mock_statistics(ids)
-        params = {"aweme_ids": ",".join(ids)}
-        return await self._request("GET", self.settings.tikhub_stats_endpoint, params=params)
+        try:
+            return await self._fetch_statistics_once(ids)
+        except TikHubClientError as exc:
+            if len(ids) == 1:
+                raise
+            # One bad id in a pair can make TikHub return 400 for the whole batch.
+            logger.warning(
+                "Batch statistics failed (%s); retrying one-by-one",
+                exc.status_code,
+            )
+            merged: dict[str, Any] = {"code": 200, "data": {"statistics_list": []}}
+            for aweme_id in ids:
+                try:
+                    payload = await self._fetch_statistics_once([aweme_id])
+                except TikHubClientError as single_exc:
+                    logger.warning(
+                        "Skip statistics for aweme_id=%s status=%s",
+                        aweme_id,
+                        single_exc.status_code,
+                    )
+                    continue
+                items = []
+                data = payload.get("data") if isinstance(payload, dict) else None
+                if isinstance(data, dict) and isinstance(data.get("statistics_list"), list):
+                    items = data["statistics_list"]
+                elif isinstance(data, list):
+                    items = data
+                elif isinstance(data, dict):
+                    items = [data]
+                merged["data"]["statistics_list"].extend(
+                    item for item in items if isinstance(item, dict)
+                )
+            return merged
+
+    async def _fetch_statistics_once(self, ids: list[str]) -> dict[str, Any]:
+        # Keep comma unescaped; some TikHub gateways reject %2C.
+        query = ",".join(ids)
+        path = f"{self.settings.tikhub_stats_endpoint}?aweme_ids={query}"
+        return await self._request("GET", path)
 
     async def enrich_views(self, page_or_videos, aweme_ids: list[str]) -> None:
         if not aweme_ids:
@@ -175,13 +221,23 @@ class TikHubAdapter:
                 continue
 
             if response.status_code >= 400:
+                body = ""
+                try:
+                    body = response.text[:500]
+                except Exception:
+                    body = ""
                 logger.error(
-                    "TikHub client error %s on %s %s",
+                    "TikHub client error %s on %s %s body=%s",
                     response.status_code,
                     method,
-                    path,
+                    path.split("?", 1)[0],
+                    redact_secrets(body),
                 )
-                response.raise_for_status()
+                raise TikHubClientError(
+                    f"TikHub HTTP {response.status_code}",
+                    status_code=response.status_code,
+                    body=redact_secrets(body),
+                )
 
             try:
                 return response.json()

@@ -289,26 +289,49 @@ def normalize_search_response(payload: Any) -> SearchPage:
     )
 
 
+def needs_view_enrichment(metrics: NormalizedMetrics) -> bool:
+    """Douyin search often returns play_count=0 even when the real count is hidden."""
+    if metrics.view_count is None:
+        return True
+    if metrics.view_count > 0:
+        return False
+    engagement = [
+        metrics.like_count,
+        metrics.comment_count,
+        metrics.share_count,
+        metrics.collect_count,
+    ]
+    return any(value is not None and value > 0 for value in engagement)
+
+
 def merge_statistics(video: NormalizedVideo, stats_payload: Any) -> NormalizedVideo:
     data = stats_payload.get("data") if isinstance(stats_payload, dict) else stats_payload
     candidates: list[dict[str, Any]] = []
     if isinstance(data, list):
         candidates.extend(item for item in data if isinstance(item, dict))
     elif isinstance(data, dict):
-        if "statistics_list" in data and isinstance(data["statistics_list"], list):
-            candidates.extend(item for item in data["statistics_list"] if isinstance(item, dict))
-        else:
-            candidates.append(data)
-            for value in data.values():
-                if isinstance(value, dict):
-                    candidates.append(value)
-                if isinstance(value, list):
-                    candidates.extend(item for item in value if isinstance(item, dict))
+        for key in ("statistics_list", "statistics", "aweme_list", "list"):
+            if isinstance(data.get(key), list):
+                candidates.extend(item for item in data[key] if isinstance(item, dict))
+        # Shape: {"<aweme_id>": {"play_count": ...}}
+        matched = data.get(video.external_video_id)
+        if isinstance(matched, dict):
+            candidates.insert(0, {**matched, "aweme_id": video.external_video_id})
+        candidates.append(data)
+        for key, value in data.items():
+            if isinstance(value, dict):
+                node = dict(value)
+                if "aweme_id" not in node and str(key).isdigit():
+                    node["aweme_id"] = str(key)
+                candidates.append(node)
+            if isinstance(value, list):
+                candidates.extend(item for item in value if isinstance(item, dict))
     for item in candidates:
         item_id = str(nested_get(item, "aweme_id", "awemeId", "id") or "")
         if item_id and item_id != video.external_video_id:
             continue
         metrics = normalize_metrics(item)
+        # Stats endpoint is authoritative for play_count; allow overwriting 0 from search.
         if metrics.view_count is not None:
             video.metrics.view_count = metrics.view_count
         if metrics.like_count is not None:

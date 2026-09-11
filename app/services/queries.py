@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import Keyword, Snapshot, Video, VideoKeyword
 from app.services.scoring import TrendResult, score_snapshots
+from app.services.relevance import is_relevant_video
 
 
 @dataclass
@@ -50,6 +51,8 @@ def load_video_cards(
 
     cards: list[VideoCard] = []
     for video in query.all():
+        if not is_relevant_video(video.caption, video.hashtags_json):
+            continue
         trend = score_snapshots(video, list(video.snapshots))
         if trending_only:
             if trend is None:

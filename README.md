@@ -2,6 +2,8 @@
 
 Ứng dụng MVP giúp người bán thời trang tại Việt Nam theo dõi video đầm dự tiệc đang tăng tương tác trên Douyin. Hệ thống tìm video theo từ khóa tiếng Trung qua TikHub, lưu metadata công khai theo từng lần thu thập, rồi xếp hạng xu hướng 7 ngày / 30 ngày.
 
+Bộ từ khóa mặc định được tối ưu cho phong cách Tisora (đầm tiệc nhẹ, đầm sinh nhật, corset/cúp ngực, lệch vai, hoa/nơ và voan). Kết quả thảm đỏ, haute couture, váy cưới, Hán phục, sườn xám, thời trang trình diễn và cho thuê lễ phục được loại trước khi lưu; dữ liệu cũ không liên quan cũng không xuất hiện trong danh sách và bảng xu hướng.
+
 Ứng dụng **không tải file video**. Chỉ lưu URL nguồn, thumbnail và metadata công khai.
 
 Mặc định phát triển bằng **MOCK_MODE**. Không gọi TikHub thật trừ khi bạn chủ động xác nhận.
@@ -180,9 +182,22 @@ Phát triển hoàn toàn bằng mock. Khi có API key thật (sau khi bạn xá
 
 ## 11. Chạy ứng dụng desktop (Electron)
 
-Cửa sổ desktop bọc giao diện web hiện có: tự khởi động FastAPI, mở China Dress Trend Radar, và tắt Python khi đóng cửa sổ. Liên kết “Mở trên Douyin” được mở bằng trình duyệt hệ thống, không nhúng video.
+Mặc định desktop **mở thẳng bản Railway** (cùng SQLite + lịch crawler trên cloud). Không cần chạy Python local để xem dữ liệu đã thu thập trên server.
 
-Yêu cầu thêm: **Node.js 18+** (https://nodejs.org) và thư mục `.venv` đã cài Python.
+Cấu hình: [desktop/config.json](desktop/config.json)
+
+```json
+{
+  "mode": "railway",
+  "railwayUrl": "https://web-production-f29ae8.up.railway.app",
+  "localFallback": true
+}
+```
+
+- `mode: "railway"` → xem DB cloud (khuyến nghị khi Railway đang chạy lịch).
+- `mode: "local"` → chạy FastAPI + SQLite trên máy bạn.
+- Menu **Nguồn dữ liệu** cho phép chuyển Railway / Local lúc đang mở app.
+- Nếu Railway lỗi và `localFallback: true`, app tự chuyển sang Local.
 
 ```powershell
 cd "c:\1 code app\tool check video hot douyin"
@@ -192,9 +207,7 @@ npm start
 
 Hoặc double-click `start-desktop.bat`.
 
-Lần đầu `npm install` sẽ tải Electron. App chọn cổng trống trên `127.0.0.1` (không chiếm 8000 nếu bạn đang chạy web).
-
-Đóng cửa sổ = dừng backend. Menu tiếng Việt: Tệp / Điều hướng / Xem.
+**Lưu ý:** Railway và Local là **hai database khác nhau**. Muốn xem kết quả crawler theo lịch cloud → dùng chế độ Railway. Local chỉ có dữ liệu khi bạn crawl trên máy này.
 
 Đóng gói installer Windows (tùy chọn, vẫn cần `.venv` Python trên máy chạy):
 

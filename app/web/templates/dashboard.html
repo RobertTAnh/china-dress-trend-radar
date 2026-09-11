@@ -51,10 +51,13 @@
   <div class="fw-semibold mb-1">Tiến độ thu thập</div>
   <div id="progress-text" class="text-secondary">
     {% if progress.running %}
-      Đang chạy từ khóa <strong>{{ progress.current_keyword or "..." }}</strong>
+      Đang chạy: <strong>{{ progress.current_keyword or "..." }}</strong>
       · {{ progress.request_count }} request
-      · {{ progress.result_count }} video
+      · {{ progress.result_count }} video tìm thấy
       · {{ progress.new_video_count }} mới
+      {% if progress.current_keyword and progress.current_keyword.startswith("(") %}
+      <div class="tiny mt-1">Giai đoạn sau search: cập nhật play_count, số video tìm thấy không tăng thêm.</div>
+      {% endif %}
     {% else %}
       Crawler đang chờ. Bấm “Thu thập ngay” hoặc đợi lịch thứ Hai / Tư / Sáu.
     {% endif %}

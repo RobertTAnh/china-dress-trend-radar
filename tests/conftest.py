@@ -20,7 +20,7 @@ def make_session() -> Session:
 
 def sample_aweme(
     aweme_id: str = "123",
-    desc: str = "晚礼服试穿 #晚礼服",
+    desc: str = "法式收腰连衣裙女试穿 #连衣裙",
     likes: int = 100,
     views: int | None = 1000,
     create_time: int | None = 1710000000,
@@ -35,7 +35,7 @@ def sample_aweme(
         "share_url": f"https://www.douyin.com/video/{aweme_id}",
         "author": {"uid": "u1", "nickname": "Shop A"},
         "video": {"duration": 12000, "cover": {"url_list": ["https://example.com/cover.jpg"]}},
-        "cha_list": [{"cha_name": "#晚礼服"}],
+        "cha_list": [{"cha_name": "#连衣裙"}],
         "statistics": stats,
     }
 
@@ -57,7 +57,7 @@ def normalized(
     video_id: str,
     views: int | None = 10,
     likes: int = 5,
-    caption: str = "desc",
+    caption: str = "法式收腰连衣裙女试穿",
     url: str = "",
 ) -> NormalizedVideo:
     return NormalizedVideo(
@@ -69,7 +69,7 @@ def normalized(
         published_at=datetime.utcnow() - timedelta(days=2),
         cover_url="https://example.com/a.jpg",
         duration=12,
-        hashtags=["晚礼服"],
+        hashtags=["连衣裙"],
         metrics=NormalizedMetrics(
             view_count=views,
             like_count=likes,

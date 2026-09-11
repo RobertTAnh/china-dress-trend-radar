@@ -2,22 +2,53 @@ const { app, BrowserWindow, Menu, dialog, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
+const https = require("https");
 const net = require("net");
 const path = require("path");
+const { URL } = require("url");
 
 const BACKEND_HOST = "127.0.0.1";
 const STARTUP_TIMEOUT_MS = 45000;
+const DEFAULT_RAILWAY_URL = "https://web-production-f29ae8.up.railway.app";
 
 let mainWindow = null;
 let backendProcess = null;
 let backendPort = 17800;
 let shuttingDown = false;
+let activeOrigin = DEFAULT_RAILWAY_URL;
+let currentMode = "railway";
 
 function projectRoot() {
   if (app.isPackaged) {
     return process.resourcesPath;
   }
   return path.join(__dirname, "..");
+}
+
+function loadDesktopConfig() {
+  const candidates = [
+    path.join(__dirname, "config.json"),
+    path.join(projectRoot(), "desktop", "config.json"),
+  ];
+  let fileConfig = {};
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    try {
+      fileConfig = JSON.parse(fs.readFileSync(file, "utf8"));
+      break;
+    } catch (_error) {
+      fileConfig = {};
+    }
+  }
+  const envMode = (process.env.DESKTOP_MODE || "").trim().toLowerCase();
+  const envUrl = (process.env.RAILWAY_APP_URL || process.env.DESKTOP_REMOTE_URL || "").trim();
+  const mode = envMode || fileConfig.mode || "railway";
+  const railwayUrl = (envUrl || fileConfig.railwayUrl || DEFAULT_RAILWAY_URL).replace(/\/$/, "");
+  return {
+    mode: mode === "local" ? "local" : "railway",
+    railwayUrl,
+    localFallback: fileConfig.localFallback !== false,
+  };
 }
 
 function pythonCandidates(root) {
@@ -55,12 +86,20 @@ function getFreePort() {
   });
 }
 
-function waitForHealth(port, timeoutMs) {
+function waitForUrl(url, timeoutMs) {
   const started = Date.now();
+  const target = new URL(url);
+  const client = target.protocol === "https:" ? https : http;
   return new Promise((resolve, reject) => {
     const attempt = () => {
-      const request = http.get(
-        { host: BACKEND_HOST, port, path: "/api/health", timeout: 1500 },
+      const request = client.get(
+        {
+          protocol: target.protocol,
+          hostname: target.hostname,
+          port: target.port || (target.protocol === "https:" ? 443 : 80),
+          path: target.pathname + target.search,
+          timeout: 2500,
+        },
         (response) => {
           response.resume();
           if (response.statusCode && response.statusCode < 500) {
@@ -78,13 +117,17 @@ function waitForHealth(port, timeoutMs) {
     };
     const retry = () => {
       if (Date.now() - started > timeoutMs) {
-        reject(new Error("Backend không sẵn sàng trong thời gian chờ."));
+        reject(new Error("Máy chủ không sẵn sàng trong thời gian chờ."));
         return;
       }
-      setTimeout(attempt, 350);
+      setTimeout(attempt, 400);
     };
     attempt();
   });
+}
+
+function waitForHealth(port, timeoutMs) {
+  return waitForUrl(`http://${BACKEND_HOST}:${port}/api/health`, timeoutMs);
 }
 
 function stopBackend() {
@@ -144,7 +187,7 @@ function createWindow() {
 }
 
 function serverOrigin() {
-  return `http://${BACKEND_HOST}:${backendPort}`;
+  return activeOrigin;
 }
 
 function isAppUrl(url) {
@@ -170,6 +213,7 @@ function attachNavigationGuards() {
 
 function buildMenu() {
   const origin = serverOrigin();
+  const config = loadDesktopConfig();
   const template = [
     {
       label: "Tệp",
@@ -181,6 +225,28 @@ function buildMenu() {
         },
         { type: "separator" },
         { label: "Thoát", role: "quit" },
+      ],
+    },
+    {
+      label: "Nguồn dữ liệu",
+      submenu: [
+        {
+          label: "Railway (cloud)",
+          type: "radio",
+          checked: currentMode === "railway",
+          click: () => switchMode("railway"),
+        },
+        {
+          label: "Local (máy này)",
+          type: "radio",
+          checked: currentMode === "local",
+          click: () => switchMode("local"),
+        },
+        { type: "separator" },
+        {
+          label: "Mở Railway trên trình duyệt",
+          click: () => shell.openExternal(config.railwayUrl),
+        },
       ],
     },
     {
@@ -246,15 +312,75 @@ async function startBackend() {
   return stderr;
 }
 
+async function connectRailway(railwayUrl) {
+  activeOrigin = railwayUrl.replace(/\/$/, "");
+  currentMode = "railway";
+  await waitForUrl(`${activeOrigin}/api/health`, STARTUP_TIMEOUT_MS);
+}
+
+async function connectLocal() {
+  stopBackend();
+  await startBackend();
+  activeOrigin = `http://${BACKEND_HOST}:${backendPort}`;
+  currentMode = "local";
+}
+
+async function loadActiveApp() {
+  buildMenu();
+  attachNavigationGuards();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    await mainWindow.loadURL(`${serverOrigin()}/`);
+    mainWindow.setTitle(
+      currentMode === "railway"
+        ? "China Dress Trend Radar · Railway"
+        : "China Dress Trend Radar · Local"
+    );
+  }
+}
+
+async function switchMode(mode) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const config = loadDesktopConfig();
+  mainWindow.loadFile(path.join(__dirname, "splash.html"));
+  try {
+    if (mode === "railway") {
+      stopBackend();
+      await connectRailway(config.railwayUrl);
+    } else {
+      await connectLocal();
+    }
+    await loadActiveApp();
+  } catch (error) {
+    showError(
+      mode === "railway"
+        ? "Không kết nối được Railway."
+        : "Không khởi động được chế độ local.",
+      error && error.message ? error.message : String(error)
+    );
+  }
+}
+
 async function boot() {
   createWindow();
+  const config = loadDesktopConfig();
   try {
-    await startBackend();
-    buildMenu();
-    attachNavigationGuards();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      await mainWindow.loadURL(`${serverOrigin()}/`);
+    if (config.mode === "railway") {
+      try {
+        await connectRailway(config.railwayUrl);
+      } catch (error) {
+        if (!config.localFallback) throw error;
+        dialog.showMessageBoxSync({
+          type: "warning",
+          title: "Railway chưa sẵn sàng",
+          message: "Không kết nối được Railway. Tạm chuyển sang chế độ Local trên máy này.",
+          detail: error && error.message ? error.message : String(error),
+        });
+        await connectLocal();
+      }
+    } else {
+      await connectLocal();
     }
+    await loadActiveApp();
   } catch (error) {
     showError(
       "Không khởi động được China Dress Trend Radar.",

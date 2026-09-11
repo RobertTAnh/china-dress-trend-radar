@@ -10,9 +10,10 @@ from app.config import Settings, get_settings
 from app.models import CrawlRun, Keyword, Snapshot, Video, VideoKeyword
 from app.services.budget import BudgetGuard
 from app.services.progress import progress_store
+from app.services.relevance import is_relevant_video
 from app.services.seed_defaults import get_setting, get_setting_bool, get_setting_int
-from app.tikhub.adapter import TikHubAdapter, TikHubAuthError
-from app.tikhub.normalizer import NormalizedVideo, merge_statistics
+from app.tikhub.adapter import TikHubAdapter, TikHubAuthError, TikHubClientError
+from app.tikhub.normalizer import NormalizedVideo, merge_statistics, needs_view_enrichment
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,8 @@ async def run_crawl(
     captured_at = run.started_at
     pages = get_setting_int(db, "pages_per_keyword", settings.pages_per_keyword)
     max_detail = get_setting_int(db, "max_detail_videos_per_run", settings.max_detail_videos_per_run)
+    # Keep budget for play_count enrichment (2 aweme_ids per stats request).
+    stats_reserve = min(max((max_detail + 1) // 2, 1), max(budget.remaining() // 3, 1))
 
     try:
         keywords = db.query(Keyword).filter(Keyword.active.is_(True)).order_by(Keyword.id).all()
@@ -170,6 +173,9 @@ async def run_crawl(
             cursor, search_id, backtrace = 0, "", ""
             try:
                 for _page in range(pages):
+                    # Leave room for play_count stats after at least one search request.
+                    if budget.remaining() <= stats_reserve and budget.run_requests > 0:
+                        break
                     if not budget.can_request():
                         run.status = "budget_stopped"
                         break
@@ -182,11 +188,25 @@ async def run_crawl(
                     budget.record_search()
                     progress_store.update(request_count=budget.run_requests)
                     for item in page.videos:
+                        if not is_relevant_video(
+                            item.caption,
+                            item.hashtags,
+                            search_keyword=keyword.keyword,
+                        ):
+                            logger.info(
+                                "Filtered irrelevant result video_id=%s keyword_id=%s",
+                                item.external_video_id,
+                                keyword.id,
+                            )
+                            continue
                         run.result_count += 1
                         video, created = upsert_video(db, item, keyword, captured_at)
                         if created:
                             run.new_video_count += 1
-                        if item.metrics.view_count is None and item.external_video_id not in seen_ids:
+                        if (
+                            needs_view_enrichment(item.metrics)
+                            and item.external_video_id not in seen_ids
+                        ):
                             missing_views.append(item)
                         seen_ids.add(item.external_video_id)
                         del video
@@ -213,19 +233,51 @@ async def run_crawl(
                 run.error_message = str(exc)
 
         if run.status == "running":
+            progress_store.update(current_keyword="(đang cập nhật lượt xem)")
+            missing_views.sort(
+                key=lambda item: item.metrics.like_count or 0,
+                reverse=True,
+            )
             detail_candidates = missing_views[:max_detail]
             for index in range(0, len(detail_candidates), 2):
                 if not budget.can_request():
                     run.status = "budget_stopped"
                     break
                 batch = detail_candidates[index : index + 2]
-                payload = await adapter.fetch_statistics([item.external_video_id for item in batch])
+                progress_store.update(
+                    current_keyword=f"(lượt xem {index + 1}-{min(index + 2, len(detail_candidates))}/{len(detail_candidates)})"
+                )
+                try:
+                    payload = await adapter.fetch_statistics(
+                        [item.external_video_id for item in batch]
+                    )
+                except TikHubClientError as exc:
+                    logger.warning(
+                        "Statistics enrichment skipped for batch size=%s status=%s",
+                        len(batch),
+                        exc.status_code,
+                    )
+                    progress_store.update(
+                        last_error=f"Bỏ qua lấy view (HTTP {exc.status_code}). Tiếp tục các video khác."
+                    )
+                    continue
+                except Exception as exc:
+                    logger.exception("Statistics enrichment failed")
+                    progress_store.update(last_error=str(exc))
+                    continue
+                # Count actual TikHub stats calls: batch attempt + optional single retries.
                 budget.record_stats()
                 progress_store.update(request_count=budget.run_requests)
                 for item in batch:
                     merge_statistics(item, payload)
                     upsert_video(db, item, None, captured_at)
                 db.commit()
+            if detail_candidates and budget.stopped:
+                logger.warning(
+                    "Stopped before enriching all views; filled=%s pending=%s",
+                    min(len(detail_candidates), budget.run_requests),
+                    max(len(missing_views) - len(detail_candidates), 0),
+                )
 
         if run.status == "running":
             run.status = "success"

@@ -22,6 +22,12 @@
       "desktop/**/*",
       "package.json"
     ],
+    "extraFiles": [
+      {
+        "from": "desktop/config.json",
+        "to": "desktop/config.json"
+      }
+    ],
     "extraResources": [
       {
         "from": "app",

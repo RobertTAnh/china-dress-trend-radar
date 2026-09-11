@@ -1,6 +1,13 @@
 from datetime import datetime, timezone
 
-from app.tikhub.normalizer import normalize_search_response, normalize_video
+from app.tikhub.normalizer import (
+    NormalizedMetrics,
+    NormalizedVideo,
+    merge_statistics,
+    needs_view_enrichment,
+    normalize_search_response,
+    normalize_video,
+)
 from tests.conftest import sample_aweme, sample_search_payload
 
 
@@ -8,14 +15,14 @@ def test_normalize_core_fields():
     video = normalize_video(sample_aweme("999", views=3210, likes=44))
     assert video is not None
     assert video.external_video_id == "999"
-    assert video.caption == "晚礼服试穿 #晚礼服"
+    assert video.caption == "法式收腰连衣裙女试穿 #连衣裙"
     assert video.author_id == "u1"
     assert video.author_name == "Shop A"
     assert video.metrics.like_count == 44
     assert video.metrics.view_count == 3210
     assert video.source_url.endswith("/999")
     assert video.cover_url.startswith("https://")
-    assert "晚礼服" in video.hashtags
+    assert "连衣裙" in video.hashtags
     assert video.published_at == datetime.fromtimestamp(1710000000, tz=timezone.utc).replace(tzinfo=None)
     assert video.raw_data["aweme_id"] == "999"
 
@@ -46,6 +53,34 @@ def test_alternate_field_names():
 def test_zero_views_are_kept():
     video = normalize_video(sample_aweme("2", views=0))
     assert video.metrics.view_count == 0
+
+
+def test_zero_views_with_likes_need_enrichment():
+    assert needs_view_enrichment(NormalizedMetrics(view_count=0, like_count=21)) is True
+    assert needs_view_enrichment(NormalizedMetrics(view_count=None, like_count=1)) is True
+    assert needs_view_enrichment(NormalizedMetrics(view_count=100, like_count=1)) is False
+    assert needs_view_enrichment(NormalizedMetrics(view_count=0, like_count=0, comment_count=0)) is False
+
+
+def test_merge_statistics_overwrites_zero_views():
+    video = NormalizedVideo(
+        external_video_id="55",
+        metrics=NormalizedMetrics(view_count=0, like_count=10),
+    )
+    merge_statistics(
+        video,
+        {"data": {"statistics_list": [{"aweme_id": "55", "play_count": 12345, "digg_count": 10}]}},
+    )
+    assert video.metrics.view_count == 12345
+
+
+def test_merge_statistics_keyed_by_aweme_id():
+    video = NormalizedVideo(
+        external_video_id="77",
+        metrics=NormalizedMetrics(view_count=0, like_count=5),
+    )
+    merge_statistics(video, {"data": {"77": {"play_count": 888, "digg_count": 5}}})
+    assert video.metrics.view_count == 888
 
 
 def test_search_payload_nested_business_data():

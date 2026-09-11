@@ -12,6 +12,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.codex-testdeps/
 venv/
 env/
 *.egg-info/

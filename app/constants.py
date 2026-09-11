@@ -1,15 +1,28 @@
 DEFAULT_KEYWORDS = [
-    ("晚礼服", "Đầm dạ hội"),
-    ("宴会礼服", "Đầm dự tiệc"),
-    ("敬酒服", "Váy nâng ly"),
-    ("生日礼服", "Đầm sinh nhật"),
-    ("高级感连衣裙", "Đầm cảm giác cao cấp"),
-    ("法式礼服", "Đầm Pháp"),
-    ("显瘦礼服", "Đầm tôn dáng"),
-    ("小个子礼服", "Đầm cho người thấp"),
-    ("新中式礼服", "Đầm Tân Trung Hoa"),
-    ("年会礼服", "Đầm tất niên"),
+    ("轻礼服连衣裙女", "Đầm tiệc nhẹ nữ"),
+    ("小众设计感连衣裙女", "Đầm nữ thiết kế ít đụng hàng"),
+    ("生日战袍连衣裙女", "Đầm nữ nổi bật mặc sinh nhật"),
+    ("法式收腰连衣裙女", "Đầm nữ phong cách Pháp nhấn eo"),
+    ("一字肩花朵连衣裙", "Đầm trễ vai đính hoa"),
+    ("抹胸蝴蝶结连衣裙", "Đầm cúp ngực đính nơ"),
+    ("吊带网纱长裙女", "Đầm hai dây dài phối voan"),
+    ("气质小黑裙女", "Đầm đen nữ tính thanh lịch"),
+    ("梨形身材显瘦连衣裙", "Đầm tôn dáng quả lê"),
+    ("小个子显高连衣裙", "Đầm giúp người thấp trông cao"),
 ]
+
+LEGACY_KEYWORDS = {
+    "晚礼服",
+    "宴会礼服",
+    "敬酒服",
+    "生日礼服",
+    "高级感连衣裙",
+    "法式礼服",
+    "显瘦礼服",
+    "小个子礼服",
+    "新中式礼服",
+    "年会礼服",
+}
 
 SETTING_KEYS = {
     "usd_vnd_rate": "26000",

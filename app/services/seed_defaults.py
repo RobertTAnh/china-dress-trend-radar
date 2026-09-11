@@ -5,7 +5,7 @@ import os
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.constants import DEFAULT_KEYWORDS, SETTING_KEYS
+from app.constants import DEFAULT_KEYWORDS, LEGACY_KEYWORDS, SETTING_KEYS
 from app.models import AppSetting, Keyword
 
 ENV_SETTING_KEYS = {
@@ -53,9 +53,17 @@ def seed_defaults(db: Session) -> None:
         db.add(AppSetting(key=key, value=value))
         known.add(key)
 
-    if db.query(Keyword).count() == 0:
-        for word, meaning in DEFAULT_KEYWORDS:
+    # Migrate the original broad ceremonial keyword profile to the narrower
+    # Tisora commercial-dress profile without touching user-created keywords.
+    for legacy in db.query(Keyword).filter(Keyword.keyword.in_(LEGACY_KEYWORDS)).all():
+        legacy.active = False
+    existing_keywords = {row.keyword: row for row in db.query(Keyword).all()}
+    for word, meaning in DEFAULT_KEYWORDS:
+        keyword = existing_keywords.get(word)
+        if keyword is None:
             db.add(Keyword(keyword=word, vietnamese_meaning=meaning, active=True))
+        else:
+            keyword.vietnamese_meaning = meaning
     db.flush()
     sync_runtime_env(db)
     db.commit()
