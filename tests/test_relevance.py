@@ -43,6 +43,11 @@ def test_still_rejects_bride_specific_dresses():
     assert not is_relevant_video("新中式敬酒服婚服推荐")
 
 
+def test_rejects_car_show_and_separate_skirt_content():
+    assert not is_relevant_video("#长裙礼服高级感 #车展随拍 #成都车展")
+    assert not is_relevant_video("#半身裙 #气质显瘦小黑裙 #侧开叉半身裙")
+
+
 def test_rejects_entertainment_and_fan_accounts_by_author():
     caption = "黑色吊带纱裙造型，这气质太美啦"
     assert not is_relevant_video(caption, author_name="OG娱乐")

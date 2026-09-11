@@ -4,8 +4,8 @@ DEFAULT_KEYWORDS = [
     ("生日约会连衣裙", "Đầm mặc sinh nhật và hẹn hò"),
     ("法式连衣裙", "Đầm nữ phong cách Pháp"),
     ("一字肩连衣裙", "Đầm trễ vai"),
-    ("抹胸连衣裙", "Đầm cúp ngực"),
-    ("吊带长裙", "Đầm hai dây dài"),
+    ("抹胸连衣裙试穿", "Thử đầm cúp ngực"),
+    ("吊带连衣裙试穿", "Thử đầm hai dây"),
     ("气质小黑裙", "Đầm đen nữ tính thanh lịch"),
     ("纯欲辣妹连衣裙", "Đầm nữ tính quyến rũ trẻ trung"),
     ("小个子连衣裙", "Đầm cho người thấp"),
@@ -35,6 +35,8 @@ LEGACY_KEYWORDS = {
     "轻礼服女",
     "生日战袍",
     "梨形身材连衣裙",
+    "抹胸连衣裙",
+    "吊带长裙",
 }
 
 SETTING_KEYS = {
