@@ -24,8 +24,8 @@ EXCLUDED_TERMS = {
     "婚纱",
     "新娘",
     "敬酒服",
-    "订婚",
-    "婚礼",
+    "主纱",
+    "婚服",
     "汉服",
     "旗袍",
     "秀场",
@@ -37,10 +37,6 @@ EXCLUDED_TERMS = {
     "租赁",
     "礼服馆",
 }
-
-# These words describe a wedding-adjacent use case, but the dress itself can
-# still suit birthdays, dates, and light parties. Penalize rather than reject.
-SOFT_WEDDING_TERMS = {"结婚", "伴娘"}
 
 EXCLUDED_AUTHOR_TERMS = {
     "娱乐",
@@ -84,6 +80,7 @@ STYLE_TERMS = {
     "公主风",
     "梨形身材",
     "气质",
+    "伴娘",
 }
 
 SHOPPING_TERMS = {
@@ -100,7 +97,17 @@ SHOPPING_TERMS = {
     "显瘦",
 }
 
-OCCASION_TERMS = {"生日", "约会", "聚餐", "派对", "轻礼服"}
+OCCASION_TERMS = {
+    "生日",
+    "约会",
+    "聚餐",
+    "派对",
+    "轻礼服",
+    "伴娘",
+    "婚礼",
+    "结婚",
+    "订婚",
+}
 
 
 def relevance_text(caption: str | None, hashtags: Iterable[str] | dict | None = None) -> str:
@@ -136,8 +143,6 @@ def relevance_score(
     score += min(occasion_matches, 2) * 10
     if search_keyword and search_keyword.lower() in text:
         score += 15
-    if any(term in text for term in SOFT_WEDDING_TERMS):
-        score -= 15
     return max(min(score, 100), 0)
 
 

@@ -22,7 +22,6 @@ def test_rejects_celebrity_events_seen_in_production_results():
     assert not is_relevant_video("杨幂虎纹吊带抹胸短裙，野性辣妹气场直接炸场 #杨幂 #品牌活动")
     assert not is_relevant_video("孟娜黑色抹胸长裙搭配盘发造型 #抖音心动追剧盛典")
     assert not is_relevant_video("感谢ASA礼服 #世界小姐 #选美冠军")
-    assert not is_relevant_video("这条伴娘裙生日约会都很适合的一条轻礼服")
 
 
 def test_keeps_wedding_adjacent_dress_with_multiple_party_signals():
@@ -35,8 +34,13 @@ def test_keeps_wedding_adjacent_dress_with_multiple_party_signals():
     assert is_relevant_video(caption, search_keyword="生日约会连衣裙")
 
 
-def test_rejects_pure_bridesmaid_content_without_party_signals():
-    assert not is_relevant_video("今年流行的伴娘礼服，结婚当天统一穿")
+def test_keeps_bridesmaid_dress_as_product_inspiration():
+    assert is_relevant_video("今年流行的伴娘礼服，结婚当天统一穿")
+
+
+def test_still_rejects_bride_specific_dresses():
+    assert not is_relevant_video("新娘婚纱主纱婚礼当天穿")
+    assert not is_relevant_video("新中式敬酒服婚服推荐")
 
 
 def test_rejects_entertainment_and_fan_accounts_by_author():
