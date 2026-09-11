@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Tổng quan · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="h3 mb-1">Bảng xu hướng đầm dự tiệc Douyin</h1>
+    <p class="text-secondary mb-0">Theo dõi video đang tăng tương tác trong 7 hoặc 30 ngày. Không tải file video.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="post" action="/seed">
+      <button class="btn btn-outline-light" type="submit">Seed dữ liệu mẫu</button>
+    </form>
+    <form method="post" action="/crawl/start">
+      <button class="btn btn-accent" type="submit" {% if progress.running %}disabled{% endif %}>Thu thập ngay</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card"><div class="label">Tổng video</div><div class="value">{{ stats.total_videos|vnint }}</div></div>
+  </div>
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card"><div class="label">Video mới 7 ngày</div><div class="value">{{ stats.new_videos|vnint }}</div></div>
+  </div>
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card"><div class="label">Request tháng này</div><div class="value">{{ stats.month_requests|vnint }}/{{ stats.max_month }}</div></div>
+  </div>
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card"><div class="label">Chi phí ước tính</div><div class="value">{{ stats.month_cost_usd|usd }}</div><div class="sub">{{ stats.month_cost_vnd|vnd }}</div></div>
+  </div>
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="label">Lần chạy gần nhất</div>
+      <div class="value small-value">{% if stats.last_run %}{{ stats.last_run.started_at|vndatetime }}{% else %}Chưa có{% endif %}</div>
+      <div class="sub">{% if stats.last_run %}{{ stats.last_run.status }} · {{ stats.last_run.request_count }} request{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="label">Crawler</div>
+      <div class="value small-value" id="crawler-status">{{ progress.status }}</div>
+      <div class="sub" id="crawler-detail">
+        {% if progress.running %}Từ khóa: {{ progress.current_keyword or "..." }}{% elif stats.within_budget %}Trong ngân sách{% else %}Đã chạm hạn mức{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="progress-box mb-4" id="progress-box">
+  <div class="fw-semibold mb-1">Tiến độ thu thập</div>
+  <div id="progress-text" class="text-secondary">
+    {% if progress.running %}
+      Đang chạy từ khóa <strong>{{ progress.current_keyword or "..." }}</strong>
+      · {{ progress.request_count }} request
+      · {{ progress.result_count }} video
+      · {{ progress.new_video_count }} mới
+    {% else %}
+      Crawler đang chờ. Bấm “Thu thập ngay” hoặc đợi lịch thứ Hai / Tư / Sáu.
+    {% endif %}
+  </div>
+  {% if progress.last_error %}
+  <div class="text-warning mt-2" id="progress-error">Lỗi gần nhất: {{ progress.last_error }}</div>
+  {% else %}
+  <div class="text-warning mt-2 d-none" id="progress-error"></div>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="panel">
+      <h2 class="h5">Top Trending 7 ngày</h2>
+      {% with cards = top7 %}
+      {% include "partials/video_cards.html" %}
+      {% endwith %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <h2 class="h5">Top Trending 30 ngày</h2>
+      {% with cards = top30 %}
+      {% include "partials/video_cards.html" %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+{% endblock %}

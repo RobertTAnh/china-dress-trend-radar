@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Cài đặt ngân sách và tìm kiếm</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="stat-card"><div class="label">Request lần chạy hiện tại</div><div class="value">{{ budget.run_requests }}/{{ budget.max_run }}</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Request tháng này</div><div class="value">{{ budget.month_requests }}/{{ budget.max_month }}</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Chi phí ước tính</div><div class="value">{{ budget.estimated_cost_usd|usd }}</div><div class="sub">{{ budget.estimated_cost_vnd|vnd }}</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Ngân sách</div><div class="value small-value">{% if budget.within_budget %}Còn trong hạn mức{% else %}Đã dừng{% endif %}</div></div></div>
+</div>
+
+<form class="panel" method="post" action="/settings">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Tỷ giá USD/VND</label>
+      <input class="form-control" name="usd_vnd_rate" value="{{ values.usd_vnd_rate }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Giá 1 request search (USD)</label>
+      <input class="form-control" name="cost_per_search_usd" value="{{ values.cost_per_search_usd }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Giá 1 request thống kê (USD)</label>
+      <input class="form-control" name="cost_per_stats_usd" value="{{ values.cost_per_stats_usd }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Tối đa request / lần chạy</label>
+      <input class="form-control" name="max_requests_per_run" value="{{ values.max_requests_per_run }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Tối đa request / tháng</label>
+      <input class="form-control" name="max_requests_per_month" value="{{ values.max_requests_per_month }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Số trang mỗi từ khóa</label>
+      <input class="form-control" name="pages_per_keyword" value="{{ values.pages_per_keyword }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Tối đa video cập nhật chi tiết</label>
+      <input class="form-control" name="max_detail_videos_per_run" value="{{ values.max_detail_videos_per_run }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Rate limiter nội bộ (req/s)</label>
+      <input class="form-control" name="internal_rate_limit_rps" value="{{ values.internal_rate_limit_rps }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Sắp xếp tìm kiếm (0 liên quan, 2 mới nhất)</label>
+      <input class="form-control" name="search_sort_type" value="{{ values.search_sort_type }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Lọc thời gian đăng (0/1/7/180)</label>
+      <input class="form-control" name="search_publish_time" value="{{ values.search_publish_time }}">
+      <div class="form-text text-secondary">TikHub không có lọc 30 ngày. Báo cáo 30 ngày dùng dữ liệu đã lưu.</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Loại nội dung (1 = video)</label>
+      <input class="form-control" name="search_content_type" value="{{ values.search_content_type }}">
+    </div>
+    <div class="col-12">
+      <label class="form-label">Endpoint tìm kiếm TikHub</label>
+      <input class="form-control" name="tikhub_search_endpoint" value="{{ values.tikhub_search_endpoint }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Dùng general search V2</label>
+      <select class="form-select" name="tikhub_use_fallback_search">
+        <option value="false" {% if values.tikhub_use_fallback_search != "true" %}selected{% endif %}>Không (video search V2)</option>
+        <option value="true" {% if values.tikhub_use_fallback_search == "true" %}selected{% endif %}>Có</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Bật lịch T2/T4/T6</label>
+      <select class="form-select" name="scheduler_enabled">
+        <option value="false" {% if values.scheduler_enabled != "true" %}selected{% endif %}>Tắt</option>
+        <option value="true" {% if values.scheduler_enabled == "true" %}selected{% endif %}>Bật</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Giờ (Asia/Bangkok)</label>
+      <input class="form-control" name="scheduler_hour" value="{{ values.scheduler_hour }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Phút</label>
+      <input class="form-control" name="scheduler_minute" value="{{ values.scheduler_minute }}">
+    </div>
+  </div>
+  <button class="btn btn-accent mt-4" type="submit">Lưu cài đặt</button>
+</form>
+{% endblock %}

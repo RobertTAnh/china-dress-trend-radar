@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Video · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Danh sách video</h1>
+<form class="filter-bar row g-2 mb-3" method="get">
+  <div class="col-md-2">
+    <label class="form-label">Khoảng thời gian</label>
+    <select name="days" class="form-select">
+      <option value="7" {% if days == 7 %}selected{% endif %}>7 ngày</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>30 ngày</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Từ khóa</label>
+    <select name="keyword_id" class="form-select">
+      <option value="">Tất cả</option>
+      {% for item in keywords %}
+      <option value="{{ item.id }}" {% if keyword_id == item.id %}selected{% endif %}>{{ item.keyword }} — {{ item.vietnamese_meaning }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Trend score tối thiểu</label>
+    <input class="form-control" type="number" step="0.1" name="min_score" value="{{ min_score or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Sắp xếp</label>
+    <select name="sort" class="form-select">
+      <option value="trend_score" {% if sort == "trend_score" %}selected{% endif %}>Trend score</option>
+      <option value="like_velocity" {% if sort == "like_velocity" %}selected{% endif %}>Tốc độ like</option>
+      <option value="published_at" {% if sort == "published_at" %}selected{% endif %}>Ngày đăng</option>
+    </select>
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="only_new" value="1" id="onlyNew" {% if only_new %}checked{% endif %}>
+      <label class="form-check-label" for="onlyNew">Chỉ video mới</label>
+    </div>
+  </div>
+  <div class="col-md-1 d-flex align-items-end">
+    <button class="btn btn-accent w-100" type="submit">Lọc</button>
+  </div>
+</form>
+
+<div class="table-responsive panel">
+  <table class="table table-dark align-middle">
+    <thead>
+      <tr>
+        <th>Thumbnail</th>
+        <th>Mô tả</th>
+        <th>Tác giả</th>
+        <th>Ngày đăng</th>
+        <th>Từ khóa</th>
+        <th>Tương tác</th>
+        <th>Tăng</th>
+        <th>Score</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for card in cards %}
+      <tr>
+        <td>
+          {% if card.video.cover_url|safe_url %}
+          <img class="thumb-lg" src="{{ card.video.cover_url|safe_url }}" alt="">
+          {% endif %}
+        </td>
+        <td class="caption">{{ card.video.caption[:120] }}{% if card.video.caption|length > 120 %}…{% endif %}</td>
+        <td>{{ card.video.author_name }}</td>
+        <td>{{ card.video.published_at|vndate }}</td>
+        <td class="tiny">{{ card.keywords|join(", ") }}</td>
+        <td class="tiny">
+          Xem: {{ card.latest.view_count|vnint if card.latest else "—" }}<br>
+          Like: {{ card.latest.like_count|vnint if card.latest else "—" }}<br>
+          Cmt: {{ card.latest.comment_count|vnint if card.latest else "—" }}<br>
+          Share: {{ card.latest.share_count|vnint if card.latest else "—" }}<br>
+          Lưu: {{ card.latest.collect_count|vnint if card.latest else "—" }}
+        </td>
+        <td class="tiny">
+          {% if card.trend %}
+          Xem: {{ card.trend.delta_views|vnint }}<br>
+          Like: {{ card.trend.delta_likes|vnint }}<br>
+          Cmt: {{ card.trend.delta_comments|vnint }}<br>
+          Share: {{ card.trend.delta_shares|vnint }}<br>
+          Lưu: {{ card.trend.delta_collects|vnint }}
+          {% else %}Cần thêm snapshot{% endif %}
+        </td>
+        <td>
+          {% if card.trend %}
+            {{ "%.2f"|format(card.trend.trend_score) }}
+            {% if card.trend.needs_review %}<div class="badge text-bg-warning">Cần kiểm tra</div>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if card.video.source_url|safe_url %}
+          <a class="btn btn-sm btn-outline-light" href="{{ card.video.source_url|safe_url }}" target="_blank" rel="noopener noreferrer">Mở trên Douyin</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="text-secondary">Không có video phù hợp bộ lọc.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

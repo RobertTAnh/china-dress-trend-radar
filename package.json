@@ -1,0 +1,68 @@
+{
+  "name": "china-dress-trend-radar",
+  "version": "0.1.0",
+  "description": "China Dress Trend Radar — ứng dụng desktop theo dõi xu hướng đầm dự tiệc Douyin",
+  "author": "China Dress Trend Radar",
+  "private": true,
+  "main": "desktop/main.js",
+  "scripts": {
+    "start": "electron .",
+    "desktop": "electron .",
+    "pack": "electron-builder --win --dir",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.chinadress.trendradar",
+    "productName": "China Dress Trend Radar",
+    "copyright": "China Dress Trend Radar",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "app",
+        "to": "app"
+      },
+      {
+        "from": "alembic",
+        "to": "alembic"
+      },
+      {
+        "from": "alembic.ini",
+        "to": "alembic.ini"
+      },
+      {
+        "from": "requirements.txt",
+        "to": "requirements.txt"
+      },
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "China Dress Trend Radar"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.1"
+  }
+}

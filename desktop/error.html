@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Không khởi động được</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #121018;
+      color: #f4efe8;
+      font-family: "Segoe UI", sans-serif;
+      padding: 32px;
+    }
+    .box { max-width: 640px; }
+    h1 { color: #d4a017; }
+    pre {
+      white-space: pre-wrap;
+      background: #1c1824;
+      padding: 16px;
+      border-radius: 12px;
+      color: #b7ad9f;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Không khởi động được backend</h1>
+    <p id="message">Ứng dụng desktop cần Python 3.11+ và thư mục .venv.</p>
+    <pre id="detail"></pre>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    document.getElementById("message").textContent = params.get("message") || document.getElementById("message").textContent;
+    document.getElementById("detail").textContent = params.get("detail") || "";
+  </script>
+</body>
+</html>

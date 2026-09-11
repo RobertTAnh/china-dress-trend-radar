@@ -1,0 +1,266 @@
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from threading import Lock
+
+from sqlalchemy.orm import Session
+
+from app.config import Settings, get_settings
+from app.models import CrawlRun, Keyword, Snapshot, Video, VideoKeyword
+from app.services.budget import BudgetGuard
+from app.services.progress import progress_store
+from app.services.seed_defaults import get_setting, get_setting_bool, get_setting_int
+from app.tikhub.adapter import TikHubAdapter, TikHubAuthError
+from app.tikhub.normalizer import NormalizedVideo, merge_statistics
+
+logger = logging.getLogger(__name__)
+
+_run_lock = Lock()
+
+
+class CrawlInProgress(Exception):
+    pass
+
+
+def _apply_runtime_settings(db: Session, settings: Settings) -> Settings:
+    settings.tikhub_use_fallback_search = get_setting_bool(
+        db, "tikhub_use_fallback_search", settings.tikhub_use_fallback_search
+    )
+    endpoint = get_setting(db, "tikhub_search_endpoint", settings.tikhub_search_endpoint)
+    if endpoint:
+        settings.tikhub_search_endpoint = endpoint
+    settings.search_sort_type = get_setting(db, "search_sort_type", settings.search_sort_type)
+    settings.search_publish_time = get_setting(db, "search_publish_time", settings.search_publish_time)
+    settings.search_content_type = get_setting(db, "search_content_type", settings.search_content_type)
+    try:
+        settings.internal_rate_limit_rps = float(
+            get_setting(db, "internal_rate_limit_rps", str(settings.internal_rate_limit_rps))
+        )
+    except ValueError:
+        pass
+    return settings
+
+
+def upsert_video(
+    db: Session,
+    item: NormalizedVideo,
+    keyword: Keyword | None,
+    captured_at: datetime,
+) -> tuple[Video, bool]:
+    existing = (
+        db.query(Video)
+        .filter(Video.external_video_id == item.external_video_id)
+        .one_or_none()
+    )
+    created = False
+    if existing is None:
+        existing = Video(
+            platform="douyin",
+            external_video_id=item.external_video_id,
+            source_url=item.source_url,
+            caption=item.caption,
+            author_id=item.author_id,
+            author_name=item.author_name,
+            published_at=item.published_at,
+            cover_url=item.cover_url,
+            duration=item.duration,
+            hashtags_json=item.hashtags,
+            first_seen_at=captured_at,
+            last_seen_at=captured_at,
+            raw_data_json=item.raw_data,
+        )
+        db.add(existing)
+        db.flush()
+        created = True
+    else:
+        if item.source_url and item.source_url != existing.source_url:
+            existing.source_url = item.source_url
+        existing.caption = item.caption or existing.caption
+        existing.author_id = item.author_id or existing.author_id
+        existing.author_name = item.author_name or existing.author_name
+        existing.cover_url = item.cover_url or existing.cover_url
+        existing.duration = item.duration if item.duration is not None else existing.duration
+        existing.hashtags_json = item.hashtags or existing.hashtags_json
+        existing.published_at = item.published_at or existing.published_at
+        existing.last_seen_at = captured_at
+        existing.raw_data_json = item.raw_data or existing.raw_data_json
+
+    if keyword is not None:
+        link = (
+            db.query(VideoKeyword)
+            .filter(
+                VideoKeyword.video_id == existing.id,
+                VideoKeyword.keyword_id == keyword.id,
+            )
+            .one_or_none()
+        )
+        if link is None:
+            db.add(
+                VideoKeyword(
+                    video_id=existing.id,
+                    keyword_id=keyword.id,
+                    first_seen_at=captured_at,
+                )
+            )
+
+    snapshot = (
+        db.query(Snapshot)
+        .filter(Snapshot.video_id == existing.id, Snapshot.captured_at == captured_at)
+        .one_or_none()
+    )
+    if snapshot is None:
+        db.add(
+            Snapshot(
+                video_id=existing.id,
+                captured_at=captured_at,
+                view_count=item.metrics.view_count,
+                like_count=item.metrics.like_count,
+                comment_count=item.metrics.comment_count,
+                share_count=item.metrics.share_count,
+                collect_count=item.metrics.collect_count,
+            )
+        )
+    else:
+        if item.metrics.view_count is not None:
+            snapshot.view_count = item.metrics.view_count
+        if item.metrics.like_count is not None:
+            snapshot.like_count = item.metrics.like_count
+        if item.metrics.comment_count is not None:
+            snapshot.comment_count = item.metrics.comment_count
+        if item.metrics.share_count is not None:
+            snapshot.share_count = item.metrics.share_count
+        if item.metrics.collect_count is not None:
+            snapshot.collect_count = item.metrics.collect_count
+    return existing, created
+
+
+async def run_crawl(
+    db: Session,
+    adapter: TikHubAdapter | None = None,
+    settings: Settings | None = None,
+) -> CrawlRun:
+    if not _run_lock.acquire(blocking=False):
+        raise CrawlInProgress("Đang có một lần thu thập chạy. Không thể chạy song song.")
+    running = db.query(CrawlRun).filter(CrawlRun.status == "running").first()
+    if running:
+        _run_lock.release()
+        raise CrawlInProgress("Đang có một lần thu thập chạy. Không thể chạy song song.")
+
+    settings = _apply_runtime_settings(db, (settings or get_settings()).model_copy())
+    owns_adapter = adapter is None
+    adapter = adapter or TikHubAdapter(settings=settings, mock_mode=settings.mock_mode)
+    run = CrawlRun(started_at=datetime.utcnow(), status="running")
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    progress_store.reset_for_run(run.id, settings.mock_mode)
+    budget = BudgetGuard(db, run)
+    captured_at = run.started_at
+    pages = get_setting_int(db, "pages_per_keyword", settings.pages_per_keyword)
+    max_detail = get_setting_int(db, "max_detail_videos_per_run", settings.max_detail_videos_per_run)
+
+    try:
+        keywords = db.query(Keyword).filter(Keyword.active.is_(True)).order_by(Keyword.id).all()
+        missing_views: list[NormalizedVideo] = []
+        seen_ids: set[str] = set()
+
+        for keyword in keywords:
+            progress_store.update(current_keyword=keyword.keyword)
+            cursor, search_id, backtrace = 0, "", ""
+            try:
+                for _page in range(pages):
+                    if not budget.can_request():
+                        run.status = "budget_stopped"
+                        break
+                    page = await adapter.search_videos(
+                        keyword.keyword,
+                        cursor=cursor,
+                        search_id=search_id,
+                        backtrace=backtrace,
+                    )
+                    budget.record_search()
+                    progress_store.update(request_count=budget.run_requests)
+                    for item in page.videos:
+                        run.result_count += 1
+                        video, created = upsert_video(db, item, keyword, captured_at)
+                        if created:
+                            run.new_video_count += 1
+                        if item.metrics.view_count is None and item.external_video_id not in seen_ids:
+                            missing_views.append(item)
+                        seen_ids.add(item.external_video_id)
+                        del video
+                    progress_store.update(
+                        result_count=run.result_count,
+                        new_video_count=run.new_video_count,
+                        request_count=budget.run_requests,
+                    )
+                    db.commit()
+                    if not page.has_more:
+                        break
+                    cursor, search_id, backtrace = page.cursor, page.search_id, page.backtrace
+                if run.status == "budget_stopped":
+                    break
+            except TikHubAuthError as exc:
+                logger.error("Auth error while searching keyword id=%s", keyword.id)
+                run.status = "error"
+                run.error_message = str(exc)
+                progress_store.update(last_error=str(exc), status="error")
+                break
+            except Exception as exc:
+                logger.exception("Keyword failed: id=%s", keyword.id)
+                progress_store.update(last_error=str(exc))
+                run.error_message = str(exc)
+
+        if run.status == "running":
+            detail_candidates = missing_views[:max_detail]
+            for index in range(0, len(detail_candidates), 2):
+                if not budget.can_request():
+                    run.status = "budget_stopped"
+                    break
+                batch = detail_candidates[index : index + 2]
+                payload = await adapter.fetch_statistics([item.external_video_id for item in batch])
+                budget.record_stats()
+                progress_store.update(request_count=budget.run_requests)
+                for item in batch:
+                    merge_statistics(item, payload)
+                    upsert_video(db, item, None, captured_at)
+                db.commit()
+
+        if run.status == "running":
+            run.status = "success"
+        run.finished_at = datetime.utcnow()
+        run.estimated_cost_usd = budget.estimated_cost_usd
+        if budget.warning and run.status == "budget_stopped":
+            run.error_message = budget.warning
+        db.commit()
+        progress_store.update(
+            running=False,
+            status=run.status,
+            request_count=run.request_count,
+            result_count=run.result_count,
+            new_video_count=run.new_video_count,
+            warning=budget.warning,
+            last_error=run.error_message,
+            finished_at=run.finished_at.isoformat(timespec="seconds"),
+            current_keyword=None,
+        )
+        return run
+    except Exception as exc:
+        logger.exception("Crawl run failed")
+        run.status = "error"
+        run.error_message = str(exc)
+        run.finished_at = datetime.utcnow()
+        db.commit()
+        progress_store.update(
+            running=False,
+            status="error",
+            last_error=str(exc),
+            finished_at=run.finished_at.isoformat(timespec="seconds"),
+        )
+        raise
+    finally:
+        if _run_lock.locked():
+            _run_lock.release()
+        if owns_adapter:
+            await adapter.aclose()

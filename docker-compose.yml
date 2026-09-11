@@ -1,0 +1,13 @@
+services:
+  radar:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MOCK_MODE: "true"
+      DATABASE_URL: sqlite:///./data/radar.db
+    volumes:
+      - radar-data:/app/data
+
+volumes:
+  radar-data:

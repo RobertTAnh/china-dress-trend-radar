@@ -1,0 +1,267 @@
+# China Dress Trend Radar
+
+Ứng dụng MVP giúp người bán thời trang tại Việt Nam theo dõi video đầm dự tiệc đang tăng tương tác trên Douyin. Hệ thống tìm video theo từ khóa tiếng Trung qua TikHub, lưu metadata công khai theo từng lần thu thập, rồi xếp hạng xu hướng 7 ngày / 30 ngày.
+
+Ứng dụng **không tải file video**. Chỉ lưu URL nguồn, thumbnail và metadata công khai.
+
+Mặc định phát triển bằng **MOCK_MODE**. Không gọi TikHub thật trừ khi bạn chủ động xác nhận.
+
+## 1. Yêu cầu hệ thống
+
+- Windows 10/11
+- Python 3.11 trở lên (trên máy này dùng `py -3.11` nếu lệnh `python` không có trong PATH)
+- Node.js 18+ nếu chạy bản desktop Electron
+- Kết nối internet chỉ cần khi gọi API TikHub thật (mock mode thì không cần)
+- Khoảng 200 MB trống cho virtual environment và SQLite
+
+## 2. Cài đặt trên Windows
+
+Mở PowerShell tại thư mục dự án:
+
+```powershell
+cd "c:\1 code app\tool check video hot douyin"
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+copy .env.example .env
+```
+
+Nếu PowerShell chặn script, chạy:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+## 3. Tạo virtual environment
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements-dev.txt
+```
+
+Thoát môi trường ảo: `deactivate`.
+
+## 4. Cấu hình API key
+
+1. Sao chép `.env.example` thành `.env`.
+2. Giữ `MOCK_MODE=true` khi phát triển.
+3. Khi đã sẵn sàng gọi API thật, đặt:
+
+```text
+MOCK_MODE=false
+TIKHUB_API_KEY=điền_key_của_bạn
+```
+
+Key chỉ được đọc từ biến môi trường / file `.env`. Không ghi key vào mã nguồn, log hoặc git.
+
+Lấy key tại [user.tikhub.io](https://user.tikhub.io). Tài liệu: [Douyin API](https://tikhub.io/douyin-api), [Video Search V2](https://docs.tikhub.io/370212780e0).
+
+**Chưa gọi API thật khi chưa được chủ dự án xác nhận.** Mỗi request search TikHub khoảng 0,01 USD.
+
+## 5. Chạy mock mode
+
+`.env.example` đã bật `MOCK_MODE=true`. Không cần API key.
+
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Mở http://127.0.0.1:8000
+
+Trên dashboard bấm **Seed dữ liệu mẫu** để có từ 20 video, nhiều snapshot, video thiếu lượt xem và video trùng từ khóa. Sau đó xem Top Trending 7/30 ngày.
+
+Hoặc:
+
+```powershell
+python -m app.cli seed
+```
+
+## 6. Chạy crawler thủ công
+
+Trên dashboard bấm **Thu thập ngay**.
+
+Hoặc CLI:
+
+```powershell
+python -m app.cli crawl
+```
+
+Ở mock mode, crawler dùng dữ liệu giả, không tốn tiền TikHub.
+
+Không cho phép hai lần chạy song song.
+
+## 7. Bật lịch tự động
+
+Lịch mặc định: thứ Hai, thứ Tư, thứ Sáu, múi giờ `Asia/Bangkok`.
+
+1. Vào **Cài đặt**.
+2. Chọn **Bật lịch T2/T4/T6**.
+3. Đặt giờ/phút (mặc định 09:00).
+4. Lưu. Ứng dụng phải đang chạy thì lịch mới kích hoạt.
+
+Biến `.env`:
+
+```text
+SCHEDULER_ENABLED=true
+SCHEDULER_TIMEZONE=Asia/Bangkok
+SCHEDULER_HOUR=9
+SCHEDULER_MINUTE=0
+```
+
+## 8. Sao lưu SQLite
+
+File mặc định: `data/radar.db`.
+
+```powershell
+copy data\radar.db data\radar-backup-YYYYMMDD.db
+```
+
+Có thể copy cả thư mục `data\`. Đóng app hoặc dừng crawler trước khi sao lưu để tránh file đang ghi.
+
+## 9. Cách xem chi phí
+
+Trang **Tổng quan** và **Cài đặt** hiển thị:
+
+- số request lần chạy
+- số request trong tháng
+- chi phí ước tính USD và VND
+- tỷ giá USD/VND (mặc định 26.000, sửa thủ công)
+- trạng thái còn trong ngân sách hay đã dừng
+
+Giới hạn mặc định: 35 request/lần, 400 request/tháng. Search tính 0,01 USD/request; thống kê chi tiết tính 0,001 USD/request. Khi sắp vượt hạn mức, crawler dừng và ghi cảnh báo.
+
+## 10. Khi TikHub đổi cấu trúc API
+
+Adapter không giả định một shape JSON duy nhất. Nó lần lượt tìm video trong `business_data`, `aweme_info`, `aweme_list`, `data[]`, v.v. Bản gốc luôn lưu ở `raw_data_json`.
+
+Nếu TikHub đổi endpoint:
+
+1. Vào **Cài đặt** → Endpoint tìm kiếm.
+2. Mặc định: `/api/v1/douyin/search/fetch_video_search_v2`
+3. Có thể bật general search V2: `/api/v1/douyin/search/fetch_general_search_v2`
+
+Nếu đổi tên field, bổ sung mapping trong `app/tikhub/normalizer.py` rồi thêm test trong `tests/test_normalizer.py`. Không cần xóa dữ liệu cũ vì raw JSON vẫn còn.
+
+TikHub không có lọc “30 ngày” (chỉ 0 / 1 / 7 / 180). Báo cáo 30 ngày lọc theo ngày đăng đã lưu trong database.
+
+## Chạy test
+
+```powershell
+pytest
+```
+
+Toàn bộ HTTP được mock. Test không gọi TikHub thật.
+
+## Docker
+
+```powershell
+docker compose up --build
+```
+
+Vẫn ưu tiên chạy trực tiếp trên Windows bằng virtual environment.
+
+## Bảo mật và giới hạn
+
+- Không lưu cookie Douyin, không dùng tài khoản Douyin, không vượt CAPTCHA.
+- Không tải hàng loạt video, không phát lại video trên dashboard.
+- Rate limiter nội bộ mặc định khoảng 2 request/giây.
+- Giao diện escape HTML (Jinja2) để giảm XSS từ caption/API.
+
+## Điểm chưa kiểm chứng với API thật
+
+Phát triển hoàn toàn bằng mock. Khi có API key thật (sau khi bạn xác nhận), cần kiểm tra:
+
+- Shape thực tế của `data` / `business_data` từ Video Search V2
+- `play_count` có xuất hiện trong search hay phải gọi `fetch_video_statistics`
+- Phân trang `cursor` / `search_id` / `backtrace` đúng như tài liệu hay không
+- Giá request thống kê chi tiết (tài liệu search là 0,01 USD; App V3 thường rẻ hơn)
+
+## 11. Chạy ứng dụng desktop (Electron)
+
+Cửa sổ desktop bọc giao diện web hiện có: tự khởi động FastAPI, mở China Dress Trend Radar, và tắt Python khi đóng cửa sổ. Liên kết “Mở trên Douyin” được mở bằng trình duyệt hệ thống, không nhúng video.
+
+Yêu cầu thêm: **Node.js 18+** (https://nodejs.org) và thư mục `.venv` đã cài Python.
+
+```powershell
+cd "c:\1 code app\tool check video hot douyin"
+npm install
+npm start
+```
+
+Hoặc double-click `start-desktop.bat`.
+
+Lần đầu `npm install` sẽ tải Electron. App chọn cổng trống trên `127.0.0.1` (không chiếm 8000 nếu bạn đang chạy web).
+
+Đóng cửa sổ = dừng backend. Menu tiếng Việt: Tệp / Điều hướng / Xem.
+
+Đóng gói installer Windows (tùy chọn, vẫn cần `.venv` Python trên máy chạy):
+
+```powershell
+npm install --save-dev electron-builder
+npm run dist
+```
+
+File cài nằm trong thư mục `release\`. Cách này chưa đóng gói Python; máy đích vẫn cần virtual environment.
+
+## 12. Deploy Railway (chạy tự động)
+
+Railway host bản **web FastAPI**, không phải Electron. Lịch crawler T2/T4/T6 09:00 `Asia/Bangkok` chạy trong process web nên service phải **không ngủ**.
+
+### Chuẩn bị
+
+1. Tài khoản [railway.com](https://railway.com)
+2. Cài CLI: `npm install -g @railway/cli`
+3. Đăng nhập: `railway login`
+
+### Deploy từ máy này
+
+```powershell
+cd "c:\1 code app\tool check video hot douyin"
+railway init
+railway up
+railway variable set MOCK_MODE=true
+railway variable set SCHEDULER_ENABLED=true
+railway variable set SCHEDULER_TIMEZONE=Asia/Bangkok
+railway variable set SCHEDULER_HOUR=9
+railway variable set SCHEDULER_MINUTE=0
+railway variable set DATABASE_URL=sqlite:///./data/radar.db
+```
+
+Gắn **Volume** mount path `/app/data` để SQLite không mất khi redeploy.
+
+```powershell
+railway volume add --mount /app/data
+```
+
+Mở domain:
+
+```powershell
+railway domain
+railway open
+```
+
+### API TikHub thật
+
+Mặc định `MOCK_MODE=true` — lịch vẫn chạy nhưng **không tốn tiền TikHub**.
+
+Khi bạn xác nhận gọi API thật:
+
+```powershell
+railway variable set MOCK_MODE=false
+railway variable set TIKHUB_API_KEY=key_cua_ban
+```
+
+Mỗi lần crawl khoảng 10–35 request × 0,01 USD.
+
+## Lệnh hữu ích
+
+```powershell
+uvicorn app.main:app --reload --port 8000
+python -m app.cli seed
+python -m app.cli crawl
+pytest
+npm start
+railway up
+```

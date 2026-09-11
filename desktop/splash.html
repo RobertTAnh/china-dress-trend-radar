@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>China Dress Trend Radar</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(900px 420px at 20% -10%, #2a2038 0%, #121018 50%);
+      color: #f4efe8;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .mark {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: #d4a017;
+      color: #1a1408;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 28px;
+    }
+    h1 { margin: 8px 0 0; font-size: 22px; letter-spacing: -0.02em; }
+    p { margin: 0; color: #b7ad9f; }
+    .bar {
+      width: 220px;
+      height: 4px;
+      border-radius: 99px;
+      background: #2f2a3a;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 40%;
+      background: #d4a017;
+      animation: slide 1.1s infinite ease-in-out;
+    }
+    @keyframes slide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(350%); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="mark">D</div>
+    <h1>China Dress Trend Radar</h1>
+    <p>Đang khởi động máy chủ nội bộ…</p>
+    <div class="bar"><span></span></div>
+  </div>
+</body>
+</html>
