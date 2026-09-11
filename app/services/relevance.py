@@ -26,8 +26,6 @@ EXCLUDED_TERMS = {
     "敬酒服",
     "订婚",
     "婚礼",
-    "结婚",
-    "伴娘",
     "汉服",
     "旗袍",
     "秀场",
@@ -39,6 +37,10 @@ EXCLUDED_TERMS = {
     "租赁",
     "礼服馆",
 }
+
+# These words describe a wedding-adjacent use case, but the dress itself can
+# still suit birthdays, dates, and light parties. Penalize rather than reject.
+SOFT_WEDDING_TERMS = {"结婚", "伴娘"}
 
 EXCLUDED_AUTHOR_TERMS = {
     "娱乐",
@@ -98,6 +100,8 @@ SHOPPING_TERMS = {
     "显瘦",
 }
 
+OCCASION_TERMS = {"生日", "约会", "聚餐", "派对", "轻礼服"}
+
 
 def relevance_text(caption: str | None, hashtags: Iterable[str] | dict | None = None) -> str:
     parts = [caption or ""]
@@ -125,12 +129,16 @@ def relevance_score(
     product_matches = sum(term in text for term in PRODUCT_TERMS)
     style_matches = sum(term in text for term in STYLE_TERMS)
     shopping_matches = sum(term in text for term in SHOPPING_TERMS)
+    occasion_matches = sum(term in text for term in OCCASION_TERMS)
     score += min(product_matches, 2) * 30
     score += min(style_matches, 4) * 10
     score += min(shopping_matches, 2) * 5
+    score += min(occasion_matches, 2) * 10
     if search_keyword and search_keyword.lower() in text:
         score += 15
-    return min(score, 100)
+    if any(term in text for term in SOFT_WEDDING_TERMS):
+        score -= 15
+    return max(min(score, 100), 0)
 
 
 def is_relevant_video(

@@ -25,6 +25,20 @@ def test_rejects_celebrity_events_seen_in_production_results():
     assert not is_relevant_video("这条伴娘裙生日约会都很适合的一条轻礼服")
 
 
+def test_keeps_wedding_adjacent_dress_with_multiple_party_signals():
+    caption = (
+        "nico梅尼耶结婚的伴娘裙今晚六点见哦 "
+        "生日约会漂亮饭都很适合的一条轻礼服 气质又有辨识度 "
+        "随便一拍就很美#穿搭 #轻礼服 #梅尼耶结婚"
+    )
+    assert relevance_score(caption, search_keyword="生日约会连衣裙") >= 60
+    assert is_relevant_video(caption, search_keyword="生日约会连衣裙")
+
+
+def test_rejects_pure_bridesmaid_content_without_party_signals():
+    assert not is_relevant_video("今年流行的伴娘礼服，结婚当天统一穿")
+
+
 def test_rejects_entertainment_and_fan_accounts_by_author():
     caption = "黑色吊带纱裙造型，这气质太美啦"
     assert not is_relevant_video(caption, author_name="OG娱乐")
