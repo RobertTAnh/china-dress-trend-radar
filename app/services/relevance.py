@@ -138,6 +138,6 @@ def is_relevant_video(
     hashtags: Iterable[str] | dict | None = None,
     search_keyword: str | None = None,
     author_name: str | None = None,
-    minimum_score: int = 20,
+    minimum_score: int = 60,
 ) -> bool:
     return relevance_score(caption, hashtags, search_keyword, author_name) >= minimum_score

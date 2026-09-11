@@ -40,14 +40,14 @@ class Settings(BaseSettings):
     tikhub_base_url: str = "https://api.tikhub.io"
     tikhub_search_endpoint: str = "/api/v1/douyin/search/fetch_video_search_v2"
     tikhub_search_fallback_endpoint: str = "/api/v1/douyin/search/fetch_general_search_v2"
-    tikhub_stats_endpoint: str = "/api/v1/douyin/app/v3/fetch_video_statistics"
+    tikhub_stats_endpoint: str = "/api/v1/douyin/app/v3/fetch_multi_video_statistics"
     tikhub_use_fallback_search: bool = False
 
     database_url: str = "sqlite:///./data/radar.db"
 
     usd_vnd_rate: float = 26000
     cost_per_search_usd: float = 0.01
-    cost_per_stats_usd: float = 0.001
+    cost_per_stats_usd: float = 0.025
     max_requests_per_run: int = 35
     max_requests_per_month: int = 400
     pages_per_keyword: int = 3

@@ -160,8 +160,12 @@ async def run_crawl(
     captured_at = run.started_at
     pages = get_setting_int(db, "pages_per_keyword", settings.pages_per_keyword)
     max_detail = get_setting_int(db, "max_detail_videos_per_run", settings.max_detail_videos_per_run)
-    # Keep budget for play_count enrichment (2 aweme_ids per stats request).
-    stats_reserve = min(max((max_detail + 1) // 2, 1), max(budget.remaining() // 3, 1))
+    # The bulk endpoint accepts up to 50 aweme_ids in one request.
+    stats_batch_size = 50
+    stats_reserve = min(
+        max((max_detail + stats_batch_size - 1) // stats_batch_size, 1),
+        max(budget.remaining() // 3, 1),
+    )
     logger.info(
         "Crawl started run_id=%s mock=%s pages_per_keyword=%s max_requests=%s "
         "publish_time=%s sort_type=%s content_type=%s",
@@ -316,13 +320,13 @@ async def run_crawl(
                 reverse=True,
             )
             detail_candidates = missing_views[:max_detail]
-            for index in range(0, len(detail_candidates), 2):
+            for index in range(0, len(detail_candidates), stats_batch_size):
                 if not budget.can_request():
                     run.status = "budget_stopped"
                     break
-                batch = detail_candidates[index : index + 2]
+                batch = detail_candidates[index : index + stats_batch_size]
                 progress_store.update(
-                    current_keyword=f"(lượt xem {index + 1}-{min(index + 2, len(detail_candidates))}/{len(detail_candidates)})"
+                    current_keyword=f"(lượt xem {index + 1}-{min(index + stats_batch_size, len(detail_candidates))}/{len(detail_candidates)})"
                 )
                 try:
                     payload = await adapter.fetch_statistics(
@@ -342,7 +346,7 @@ async def run_crawl(
                     logger.exception("Statistics enrichment failed")
                     progress_store.update(last_error=str(exc))
                     continue
-                # Count actual TikHub stats calls: batch attempt + optional single retries.
+                # One billed call covers the whole batch (up to 50 videos).
                 budget.record_stats()
                 progress_store.update(request_count=budget.run_requests)
                 for item in batch:

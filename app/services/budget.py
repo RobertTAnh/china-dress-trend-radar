@@ -55,7 +55,7 @@ class BudgetGuard:
         self.max_run = get_setting_int(db, "max_requests_per_run", 35)
         self.max_month = get_setting_int(db, "max_requests_per_month", 400)
         self.cost_search = get_setting_float(db, "cost_per_search_usd", 0.01)
-        self.cost_stats = get_setting_float(db, "cost_per_stats_usd", 0.001)
+        self.cost_stats = get_setting_float(db, "cost_per_stats_usd", 0.025)
         self.usd_vnd_rate = get_setting_float(db, "usd_vnd_rate", 26000)
         self.search_count = 0
         self.stats_count = 0

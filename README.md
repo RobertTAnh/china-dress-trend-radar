@@ -176,7 +176,7 @@ Vẫn ưu tiên chạy trực tiếp trên Windows bằng virtual environment.
 Phát triển hoàn toàn bằng mock. Khi có API key thật (sau khi bạn xác nhận), cần kiểm tra:
 
 - Shape thực tế của `data` / `business_data` từ Video Search V2
-- `play_count` có xuất hiện trong search hay phải gọi `fetch_video_statistics`
+- `play_count` có xuất hiện trong search hay phải gọi `fetch_multi_video_statistics`
 - Phân trang `cursor` / `search_id` / `backtrace` đúng như tài liệu hay không
 - Giá request thống kê chi tiết (tài liệu search là 0,01 USD; App V3 thường rẻ hơn)
 

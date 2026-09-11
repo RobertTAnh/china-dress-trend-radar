@@ -53,6 +53,12 @@ def seed_defaults(db: Session) -> None:
         db.add(AppSetting(key=key, value=value))
         known.add(key)
 
+    # The bulk statistics endpoint costs $0.025 per call. Upgrade only the
+    # previous built-in value so a user-customized price remains untouched.
+    stats_cost = db.get(AppSetting, "cost_per_stats_usd")
+    if stats_cost is not None and stats_cost.value == "0.001":
+        stats_cost.value = "0.025"
+
     # Migrate the original broad ceremonial keyword profile to the narrower
     # Tisora commercial-dress profile without touching user-created keywords.
     for legacy in db.query(Keyword).filter(Keyword.keyword.in_(LEGACY_KEYWORDS)).all():
