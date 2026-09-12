@@ -5,8 +5,13 @@ import os
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.constants import DEFAULT_KEYWORDS, LEGACY_KEYWORDS, SETTING_KEYS
-from app.models import AppSetting, Keyword
+from app.constants import (
+    DEFAULT_KEYWORDS,
+    DEFAULT_PRODUCT_KEYWORDS,
+    LEGACY_KEYWORDS,
+    SETTING_KEYS,
+)
+from app.models import AppSetting, Keyword, ProductKeyword
 
 ENV_SETTING_KEYS = {
     "SCHEDULER_ENABLED": "scheduler_enabled",
@@ -15,6 +20,10 @@ ENV_SETTING_KEYS = {
     "PAGES_PER_KEYWORD": "pages_per_keyword",
     "MAX_REQUESTS_PER_RUN": "max_requests_per_run",
     "MAX_REQUESTS_PER_MONTH": "max_requests_per_month",
+    "PRODUCT_CRAWL_ENABLED": "product_crawl_enabled",
+    "PRODUCT_MOCK_MODE": "product_mock_mode",
+    "PRODUCT_FREE_PREVIEW_MODE": "product_free_preview_mode",
+    "PRODUCT_AUTO_SCHEDULE_ENABLED": "product_auto_schedule_enabled",
 }
 
 
@@ -39,6 +48,20 @@ def seed_defaults(db: Session) -> None:
             "scheduler_hour": str(settings.scheduler_hour),
             "scheduler_minute": str(settings.scheduler_minute),
             "internal_rate_limit_rps": str(settings.internal_rate_limit_rps),
+            "apify_actor_id": settings.apify_actor_id,
+            "apify_monthly_budget_usd": str(settings.apify_monthly_budget_usd),
+            "apify_estimated_price_per_1000_products": str(
+                settings.apify_estimated_price_per_1000_products
+            ),
+            "product_results_per_keyword": str(settings.product_results_per_keyword),
+            "product_max_keywords_per_run": str(settings.product_max_keywords_per_run),
+            "product_crawl_enabled": str(settings.product_crawl_enabled).lower(),
+            "product_free_preview_mode": str(settings.product_free_preview_mode).lower(),
+            "product_free_preview_run_limit": str(settings.product_free_preview_run_limit),
+            "product_auto_schedule_enabled": str(
+                settings.product_auto_schedule_enabled
+            ).lower(),
+            "product_mock_mode": str(settings.product_mock_mode).lower(),
         }
     )
     known = {
@@ -68,6 +91,22 @@ def seed_defaults(db: Session) -> None:
         keyword = existing_keywords.get(word)
         if keyword is None:
             db.add(Keyword(keyword=word, vietnamese_meaning=meaning, active=True))
+        else:
+            keyword.vietnamese_meaning = meaning
+
+    existing_product_keywords = {
+        row.keyword: row for row in db.query(ProductKeyword).all()
+    }
+    for word, meaning in DEFAULT_PRODUCT_KEYWORDS:
+        keyword = existing_product_keywords.get(word)
+        if keyword is None:
+            db.add(
+                ProductKeyword(
+                    keyword=word,
+                    vietnamese_meaning=meaning,
+                    enabled=True,
+                )
+            )
         else:
             keyword.vietnamese_meaning = meaning
     db.flush()

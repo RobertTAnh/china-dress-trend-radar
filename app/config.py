@@ -69,6 +69,22 @@ class Settings(BaseSettings):
     retry_max_attempts: int = 3
     retry_base_delay_seconds: float = 0.5
 
+    apify_token: str = ""
+    apify_base_url: str = "https://api.apify.com"
+    apify_actor_id: str = "zen-studio/douyin-product-search-scraper"
+    apify_monthly_budget_usd: float = 4.50
+    apify_estimated_price_per_1000_products: float = 7.99
+    apify_run_timeout_seconds: float = 300.0
+    apify_poll_interval_seconds: float = 5.0
+
+    product_results_per_keyword: int = 20
+    product_max_keywords_per_run: int = 1
+    product_crawl_enabled: bool = False
+    product_free_preview_mode: bool = True
+    product_free_preview_run_limit: int = 10
+    product_auto_schedule_enabled: bool = False
+    product_mock_mode: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

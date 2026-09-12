@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Sản phẩm Douyin · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Sản phẩm Douyin Shop</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="stat-card"><div class="label">Ngân sách tháng</div><div class="value">{{ '%.2f'|format(budget.monthly_budget_usd) }} USD</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Ước tính đã dùng</div><div class="value">{{ '%.2f'|format(budget.estimated_monthly_cost_usd) }} USD</div><div class="sub">Còn ~{{ '%.2f'|format(budget.remaining_usd) }} USD hữu dụng</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Chi phí dự kiến / lần</div><div class="value">{{ '%.4f'|format(budget.estimated_run_cost_usd) }} USD</div><div class="sub">{{ budget.results_per_keyword }} kết quả / từ khóa</div></div></div>
+  <div class="col-md-3"><div class="stat-card"><div class="label">Free Preview</div><div class="value">{{ budget.preview_used }}/{{ budget.preview_limit }}</div><div class="sub">{% if budget.mock_mode %}Mock mode{% elif budget.crawl_enabled %}Crawl bật{% else %}Crawl tắt{% endif %}</div></div></div>
+</div>
+<p class="tiny mb-3">{{ budget.note }}</p>
+
+<form class="filter-bar row g-2 mb-3" method="get">
+  <div class="col-md-3">
+    <label class="form-label">Từ khóa</label>
+    <select name="keyword_id" class="form-select">
+      <option value="">Tất cả</option>
+      {% for item in keywords %}
+      <option value="{{ item.id }}" {% if keyword_id == item.id %}selected{% endif %}>{{ item.keyword }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Sold tối thiểu</label>
+    <input class="form-control" type="number" name="min_sold" value="{{ min_sold or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Giá từ (CNY)</label>
+    <input class="form-control" type="number" step="0.01" name="min_price" value="{{ min_price or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Giá đến (CNY)</label>
+    <input class="form-control" type="number" step="0.01" name="max_price" value="{{ max_price or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Sắp xếp</label>
+    <select name="sort" class="form-select">
+      <option value="rank_score" {% if sort == "rank_score" %}selected{% endif %}>Điểm tổng</option>
+      <option value="monthly_sold" {% if sort == "monthly_sold" %}selected{% endif %}>Lượng bán</option>
+      <option value="growth" {% if sort == "growth" %}selected{% endif %}>Tăng trưởng</option>
+    </select>
+  </div>
+  <div class="col-md-3 d-flex align-items-end gap-3">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="only_relevant" value="1" id="onlyRel" {% if only_relevant %}checked{% endif %}>
+      <label class="form-check-label" for="onlyRel">Phù hợp</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="only_new" value="1" id="onlyNewP" {% if only_new %}checked{% endif %}>
+      <label class="form-check-label" for="onlyNewP">Mới</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="only_fast_growth" value="1" id="onlyFast" {% if only_fast_growth %}checked{% endif %}>
+      <label class="form-check-label" for="onlyFast">Tăng nhanh</label>
+    </div>
+  </div>
+  <div class="col-md-1 d-flex align-items-end">
+    <button class="btn btn-accent w-100" type="submit">Lọc</button>
+  </div>
+</form>
+
+<div class="table-responsive panel">
+  <table class="table table-dark align-middle">
+    <thead>
+      <tr>
+        <th>Ảnh</th>
+        <th>Sản phẩm</th>
+        <th>Giá CNY</th>
+        <th>Bán 30 ngày</th>
+        <th>Thay đổi</th>
+        <th>Tisora</th>
+        <th>Xu hướng</th>
+        <th>Shop</th>
+        <th>Từ khóa</th>
+        <th>Phát hiện</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for card in cards %}
+      <tr>
+        <td>
+          {% if card.product.main_image_url|safe_url %}
+          <img class="thumb-lg" src="{{ card.product.main_image_url|safe_url }}" alt="">
+          {% endif %}
+        </td>
+        <td class="caption">
+          {{ card.product.title[:100] }}{% if card.product.title|length > 100 %}…{% endif %}
+          <div class="tiny">
+            {% if card.is_new %}<span class="badge text-bg-info">mới</span>{% endif %}
+            {% if card.is_fast_growth %}<span class="badge text-bg-success">tăng nhanh</span>{% endif %}
+            <span class="badge text-bg-secondary">{{ card.rank_label }}</span>
+          </div>
+        </td>
+        <td>{% if card.snapshot and card.snapshot.price_cny is not none %}{{ '%.2f'|format(card.snapshot.price_cny) }}{% else %}—{% endif %}</td>
+        <td>{% if card.snapshot %}{{ card.snapshot.monthly_sold|vnint }}{% else %}—{% endif %}</td>
+        <td class="tiny">
+          {% if card.snapshot and card.snapshot.sales_growth_absolute is not none %}
+            {{ card.snapshot.sales_growth_absolute|vnint }}
+            {% if card.snapshot.sales_growth_percent is not none %}
+              ({{ '%.1f'|format(card.snapshot.sales_growth_percent) }}%)
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ card.relevance_score }}</td>
+        <td>{{ '%.1f'|format(card.rank_score) }}</td>
+        <td class="tiny">{{ card.product.shop_name or "—" }}</td>
+        <td class="tiny">{{ card.keywords|join(", ") }}</td>
+        <td>{{ card.product.first_seen_at|vndate }}</td>
+        <td>
+          {% if card.product.product_url|safe_url %}
+          <a class="btn btn-sm btn-outline-light" href="{{ card.product.product_url|safe_url }}" target="_blank" rel="noopener">Mở</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="11" class="text-secondary">Chưa có sản phẩm. Vào Từ khóa SP để crawl thử (mock).</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

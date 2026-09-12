@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Từ khóa sản phẩm · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Từ khóa sản phẩm Douyin</h1>
+
+<div class="panel mb-4">
+  <div class="row g-2">
+    <div class="col-md-3"><div class="label">Ngân sách tháng</div><div class="small-value">{{ '%.2f'|format(budget.monthly_budget_usd) }} USD</div></div>
+    <div class="col-md-3"><div class="label">Ước tính đã dùng</div><div class="small-value">{{ '%.2f'|format(budget.estimated_monthly_cost_usd) }} USD</div></div>
+    <div class="col-md-3"><div class="label">Dự kiến lần chạy</div><div class="small-value">{{ '%.4f'|format(budget.estimated_run_cost_usd) }} USD</div></div>
+    <div class="col-md-3"><div class="label">Free Preview</div><div class="small-value">{{ budget.preview_used }}/{{ budget.preview_limit }}</div></div>
+  </div>
+  {% if not budget.crawl_enabled %}
+  <div class="alert alert-warning mt-3 mb-0">
+    Nút <strong>Crawl thử</strong> đang tắt vì <code>PRODUCT_CRAWL_ENABLED=false</code>.
+    Đặt <code>PRODUCT_CRAWL_ENABLED=true</code> trong `.env` (và giữ <code>PRODUCT_MOCK_MODE=true</code> khi thử nghiệm) rồi khởi động lại app.
+  </div>
+  {% endif %}
+</div>
+
+<form class="panel mb-4" method="post" action="/products/keywords">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Từ khóa tiếng Trung</label>
+      <input class="form-control" name="keyword" required>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label">Nghĩa tiếng Việt</label>
+      <input class="form-control" name="vietnamese_meaning">
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-accent w-100" type="submit">Thêm từ khóa</button>
+    </div>
+  </div>
+</form>
+
+{% for item in keywords %}
+<form class="keyword-row" method="post" action="/products/keywords/{{ item.id }}/update">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Từ khóa</label>
+      <input class="form-control" name="keyword" value="{{ item.keyword }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Nghĩa tiếng Việt</label>
+      <input class="form-control" name="vietnamese_meaning" value="{{ item.vietnamese_meaning }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Trạng thái</label>
+      <div>{% if item.enabled %}<span class="badge text-bg-success">Bật</span>{% else %}<span class="badge text-bg-secondary">Tắt</span>{% endif %}</div>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn btn-outline-light" type="submit">Lưu</button>
+    </div>
+  </div>
+</form>
+<div class="d-flex gap-2 mb-4">
+  <form method="post" action="/products/keywords/{{ item.id }}/toggle">
+    <button class="btn btn-sm btn-outline-warning" type="submit">{% if item.enabled %}Tắt{% else %}Bật{% endif %}</button>
+  </form>
+  <form method="post" action="/products/keywords/{{ item.id }}/crawl">
+    <button class="btn btn-sm btn-accent" type="submit" {% if not budget.crawl_enabled or not item.enabled %}disabled{% endif %}>Crawl thử</button>
+  </form>
+  <form method="post" action="/products/keywords/{{ item.id }}/delete" onsubmit="return confirm('Xóa từ khóa sản phẩm này?');">
+    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

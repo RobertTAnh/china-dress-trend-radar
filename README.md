@@ -148,13 +148,69 @@ Nếu đổi tên field, bổ sung mapping trong `app/tikhub/normalizer.py` rồ
 
 TikHub không có lọc “30 ngày” (chỉ 0 / 1 / 7 / 180). Báo cáo 30 ngày lọc theo ngày đăng đã lưu trong database.
 
+## 13. Sản phẩm Douyin Shop (Apify)
+
+Tính năng **song song** với crawl video TikHub: tìm sản phẩm Douyin Shop qua Actor `zen-studio/douyin-product-search-scraper`, lưu snapshot lượng bán, lọc phong cách Tisora và xếp hạng.
+
+### Biến môi trường
+
+Sao chép từ `.env.example`:
+
+```text
+APIFY_TOKEN=
+APIFY_ACTOR_ID=zen-studio/douyin-product-search-scraper
+APIFY_MONTHLY_BUDGET_USD=4.50
+APIFY_ESTIMATED_PRICE_PER_1000_PRODUCTS=7.99
+PRODUCT_RESULTS_PER_KEYWORD=20
+PRODUCT_MAX_KEYWORDS_PER_RUN=1
+PRODUCT_CRAWL_ENABLED=false
+PRODUCT_FREE_PREVIEW_MODE=true
+PRODUCT_FREE_PREVIEW_RUN_LIMIT=10
+PRODUCT_AUTO_SCHEDULE_ENABLED=false
+PRODUCT_MOCK_MODE=true
+```
+
+- Token tạo tại [console.apify.com](https://console.apify.com/) → Settings → Integrations → API tokens.
+- **Không** commit token. Log sẽ redact `APIFY_TOKEN` / `Authorization: Bearer`.
+- Trên Railway: `railway variable set` từng biến trên (chỉ khi bạn xác nhận deploy).
+
+### Mock mode (mặc định)
+
+```text
+PRODUCT_MOCK_MODE=true
+PRODUCT_CRAWL_ENABLED=true
+```
+
+```powershell
+python -m app.cli product-seed
+python -m app.cli product-crawl --keyword-id 1
+```
+
+Hoặc UI: **Từ khóa SP** → **Crawl thử**. Xem kết quả tại **Sản phẩm Douyin** / **Lần chạy SP**.
+
+Chi phí ước tính mỗi lần (20 sản phẩm): `20/1000 × 7.99 ≈ 0,16 USD`. Với ngân sách hữu dụng ~4,00 USD (4,50 trừ buffer 0,50) ≈ **~25 lần/tháng**. Free Preview **10 lần** là giới hạn cứng trước. Credit Apify **không cộng dồn** sang tháng sau.
+
+Hộp ngân sách trên UI ghi rõ đây là **ước tính nội bộ**, chưa phải hóa đơn Apify.
+
+### Free Preview và Starter
+
+- Free Preview: 1 từ khóa/lần, max 20 kết quả, `includeDetails=false`, tối đa 10 run.
+- Không tự động nâng gói. Khi đủ nhu cầu, bạn tự chuyển Starter trên Apify rồi cập nhật `PRODUCT_FREE_PREVIEW_MODE=false` và ngân sách — app không tự upgrade.
+
+### API nội bộ
+
+- `POST /api/products/crawl` body `{"keyword_id": 1}`
+- `GET /api/products`, `/api/products/{id}`, `/api/products/runs`, `/api/products/budget`
+
+Client **không** được truyền Actor ID / `includeDetails` / limit tùy ý.
+
 ## Chạy test
 
 ```powershell
 pytest
 ```
 
-Toàn bộ HTTP được mock. Test không gọi TikHub thật.
+Toàn bộ HTTP được mock. Test không gọi TikHub hoặc Apify thật.
 
 ## Docker
 
@@ -274,6 +330,8 @@ Mỗi lần crawl khoảng 10–35 request × 0,01 USD.
 uvicorn app.main:app --reload --port 8000
 python -m app.cli seed
 python -m app.cli crawl
+python -m app.cli product-seed
+python -m app.cli product-crawl --keyword-id 1
 pytest
 npm start
 railway up

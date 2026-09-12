@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.models  # noqa: F401 — register product tables on Base.metadata
 from app.database import Base
 from app.models import Keyword, Snapshot, Video
 from app.services.seed_defaults import seed_defaults

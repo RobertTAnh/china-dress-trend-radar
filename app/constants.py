@@ -67,6 +67,13 @@ LEGACY_KEYWORDS = {
     "挂脖收腰连衣裙试穿",
 }
 
+DEFAULT_PRODUCT_KEYWORDS = [
+    ("法式收腰连衣裙", "Đầm Pháp nhấn eo"),
+    ("一字肩收腰连衣裙", "Đầm trễ vai nhấn eo"),
+    ("生日宴会小礼服", "Đầm tiệc nhỏ sinh nhật"),
+    ("方领蓬蓬连衣裙", "Đầm cổ vuông dáng phồng"),
+]
+
 SETTING_KEYS = {
     "usd_vnd_rate": "26000",
     "cost_per_search_usd": "0.01",
@@ -84,4 +91,17 @@ SETTING_KEYS = {
     "scheduler_hour": "9",
     "scheduler_minute": "0",
     "internal_rate_limit_rps": "2.0",
+    "apify_actor_id": "zen-studio/douyin-product-search-scraper",
+    "apify_monthly_budget_usd": "4.50",
+    "apify_estimated_price_per_1000_products": "7.99",
+    "product_results_per_keyword": "20",
+    "product_max_keywords_per_run": "1",
+    "product_crawl_enabled": "false",
+    "product_free_preview_mode": "true",
+    "product_free_preview_run_limit": "10",
+    "product_auto_schedule_enabled": "false",
+    "product_mock_mode": "true",
+    "product_free_preview_runs_used": "0",
+    "product_estimated_monthly_cost_usd": "0",
+    "product_billing_month": "",
 }

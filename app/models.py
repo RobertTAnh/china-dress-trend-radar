@@ -103,3 +103,115 @@ class AppSetting(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+
+class ProductKeyword(Base):
+    __tablename__ = "product_keywords"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    keyword: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    vietnamese_meaning: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    products: Mapped[list["ProductKeywordLink"]] = relationship(back_populates="keyword")
+    crawl_runs: Mapped[list["ProductCrawlRun"]] = relationship(back_populates="keyword")
+
+
+class Product(Base):
+    __tablename__ = "products"
+    __table_args__ = (
+        UniqueConstraint("platform", "external_product_id", name="uq_product_platform_external"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    platform: Mapped[str] = mapped_column(String(32), default="douyin", nullable=False)
+    external_product_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    promotion_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    title: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    product_url: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    main_image_url: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    shop_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    shop_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    category_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    raw_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+
+    snapshots: Mapped[list["ProductSnapshot"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
+    keywords: Mapped[list["ProductKeywordLink"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
+
+
+class ProductCrawlRun(Base):
+    __tablename__ = "product_crawl_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    keyword_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_keywords.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), default="running", nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    requested_limit: Mapped[int] = mapped_column(Integer, default=20, nullable=False)
+    received_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    normalized_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    accepted_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rejected_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    new_product_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    duplicate_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    estimated_cost_usd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    apify_run_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    apify_dataset_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    keyword: Mapped[ProductKeyword | None] = relationship(back_populates="crawl_runs")
+    snapshots: Mapped[list["ProductSnapshot"]] = relationship(back_populates="crawl_run")
+
+
+class ProductSnapshot(Base):
+    __tablename__ = "product_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "product_id", "crawl_run_id", name="uq_product_snapshot_product_run"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    crawl_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_crawl_runs.id"), nullable=True, index=True
+    )
+    captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    price_cny: Mapped[float | None] = mapped_column(Float, nullable=True)
+    monthly_sold: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lifetime_sold: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    good_review_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    shop_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    creator_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    commission_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    search_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sales_growth_absolute: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sales_growth_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    product: Mapped[Product] = relationship(back_populates="snapshots")
+    crawl_run: Mapped[ProductCrawlRun | None] = relationship(back_populates="snapshots")
+
+
+class ProductKeywordLink(Base):
+    __tablename__ = "product_keyword_links"
+
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), primary_key=True)
+    keyword_id: Mapped[int] = mapped_column(ForeignKey("product_keywords.id"), primary_key=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    best_search_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    product: Mapped[Product] = relationship(back_populates="keywords")
+    keyword: Mapped[ProductKeyword] = relationship(back_populates="products")

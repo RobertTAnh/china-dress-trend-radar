@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Lần chạy sản phẩm · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Lịch sử crawl sản phẩm</h1>
+<div class="panel mb-3">
+  Free Preview {{ budget.preview_used }}/{{ budget.preview_limit }} ·
+  Ước tính tháng {{ '%.2f'|format(budget.estimated_monthly_cost_usd) }} / {{ '%.2f'|format(budget.monthly_budget_usd) }} USD
+</div>
+<div class="panel table-responsive">
+  <table class="table table-dark">
+    <thead>
+      <tr>
+        <th>Bắt đầu</th>
+        <th>Kết thúc</th>
+        <th>Từ khóa</th>
+        <th>Trạng thái</th>
+        <th>Nhận</th>
+        <th>Chuẩn hóa</th>
+        <th>Chấp nhận</th>
+        <th>Loại</th>
+        <th>Mới</th>
+        <th>Chi phí USD</th>
+        <th>Apify run</th>
+        <th>Lỗi</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for run in runs %}
+      <tr>
+        <td>{{ run.started_at|vndatetime }}</td>
+        <td>{{ run.finished_at|vndatetime }}</td>
+        <td class="tiny">{% if run.keyword_id and keywords.get(run.keyword_id) %}{{ keywords[run.keyword_id].keyword }}{% else %}—{% endif %}</td>
+        <td>{{ run.status }}</td>
+        <td>{{ run.received_count|vnint }}</td>
+        <td>{{ run.normalized_count|vnint }}</td>
+        <td>{{ run.accepted_count|vnint }}</td>
+        <td>{{ run.rejected_count|vnint }}</td>
+        <td>{{ run.new_product_count|vnint }}</td>
+        <td>{{ run.estimated_cost_usd|usd }}</td>
+        <td class="tiny">{{ run.apify_run_id or "" }}</td>
+        <td class="tiny">{{ run.error_message or "" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="12" class="text-secondary">Chưa có lần chạy sản phẩm nào.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
