@@ -281,6 +281,17 @@ async def run_product_crawl(
             for item in result.items:
                 if item.product_id in seen_ids:
                     duplicates += 1
+                    logger.info(
+                        "Product result keyword=%s position=%s id=%s status=duplicate "
+                        "title=%r url=%s price_cny=%s monthly_sold=%s",
+                        keyword.keyword,
+                        item.search_position,
+                        item.product_id,
+                        (item.title or "")[:200],
+                        item.product_url,
+                        item.price_cny,
+                        item.monthly_sold,
+                    )
                     continue
                 seen_ids.add(item.product_id)
 
@@ -289,14 +300,27 @@ async def run_product_crawl(
                     category_name=item.category_name,
                     shop_name=item.shop_name,
                 )
+                logger.info(
+                    "Product result keyword=%s position=%s id=%s status=%s "
+                    "title=%r url=%s image=%s price_cny=%s monthly_sold=%s "
+                    "lifetime_sold=%s shop=%r category=%r relevance_score=%s reasons=%r",
+                    keyword.keyword,
+                    item.search_position,
+                    item.product_id,
+                    "accepted" if relevance.accepted else "rejected",
+                    (item.title or "")[:200],
+                    item.product_url,
+                    item.main_image_url,
+                    item.price_cny,
+                    item.monthly_sold,
+                    item.lifetime_sold,
+                    (item.shop_name or "")[:120],
+                    (item.category_name or "")[:240],
+                    relevance.score,
+                    relevance.reasons,
+                )
                 if not relevance.accepted:
                     rejected += 1
-                    logger.info(
-                        "Reject product id=%s title=%s reasons=%s",
-                        item.product_id,
-                        (item.title or "")[:80],
-                        "; ".join(relevance.reasons),
-                    )
                     continue
 
                 _product, created, _snapshot = upsert_product(

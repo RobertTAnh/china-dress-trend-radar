@@ -93,6 +93,12 @@ def test_relevance_keeps_bridesmaid_rejects_wedding_kids_hanfu():
     party = product_relevance("法式收腰连衣裙女宴会生日小礼服")
     assert party.accepted
 
+    bodycon = product_relevance("收腰显瘦包臀连衣裙女")
+    assert bodycon.accepted
+
+    handbag = product_relevance("法式女包手提包")
+    assert not handbag.accepted
+
 
 def test_ranking_redistributes_without_growth():
     with_growth = rank_product(

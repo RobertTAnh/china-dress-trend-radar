@@ -59,7 +59,6 @@ EXCLUDE_TERMS = {
     "裤",
     "配饰",
     "鞋",
-    "包",
     "办公",
     "职业装",
     "大码宽松",
@@ -106,6 +105,12 @@ def product_relevance(
                 continue
             reasons.append(f"Loại vì chứa «{term}»")
             return ProductRelevanceResult(0, reasons, False)
+
+    # "包" by itself is too broad: it also appears in valid dress terms such as
+    # 包臀 (bodycon). Only reject explicit bag/accessory phrases.
+    if any(term in blob for term in ("女包", "手提包", "单肩包", "斜挎包", "包包")):
+        reasons.append("Loại vì là túi/phụ kiện")
+        return ProductRelevanceResult(0, reasons, False)
 
     for term in BRIDAL_ONLY:
         if _contains(blob, term):
