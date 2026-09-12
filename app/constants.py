@@ -4,6 +4,8 @@ DEFAULT_KEYWORDS = [
     ("一字肩连衣裙", "Đầm trễ vai"),
     ("蝴蝶结生日连衣裙", "Đầm sinh nhật đính nơ"),
     ("黑色丝绒生日party小礼服", "Đầm tiệc nhung đen mặc sinh nhật"),
+    ("斜肩花苞连衣裙试穿", "Thử đầm lệch vai dáng hoa"),
+    ("方领收腰蓬蓬连衣裙", "Đầm cổ vuông nhấn eo dáng phồng"),
 ]
 
 LEGACY_KEYWORDS = {
@@ -58,6 +60,11 @@ LEGACY_KEYWORDS = {
     "一字肩蝴蝶结生日连衣裙",
     "缎面生日约会连衣裙",
     "鱼尾裙约会聚会礼服推荐",
+    "鱼骨抹胸连衣裙测评",
+    "法式公主鱼骨花苞连衣裙",
+    "红色收腰蓬蓬裙测评",
+    "白色吊带生日约会连衣裙",
+    "挂脖收腰连衣裙试穿",
 }
 
 SETTING_KEYS = {

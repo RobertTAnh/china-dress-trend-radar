@@ -63,6 +63,27 @@ PRODUCT_TERMS = {
     "套装",
 }
 
+DRESS_FORM_TERMS = {
+    "连衣裙",
+    "裙子",
+    "礼服",
+    "吊带裙",
+    "小黑裙",
+    "抹胸裙",
+    "蓬蓬裙",
+    "长裙",
+}
+
+NON_DRESS_GARMENT_TERMS = {
+    "上衣",
+    "衬衫",
+    "t恤",
+    "打底衫",
+    "裤子",
+    "牛仔裤",
+    "外套",
+}
+
 STYLE_TERMS = {
     "轻礼服",
     "小众设计",
@@ -131,6 +152,10 @@ def relevance_score(
     author = (author_name or "").lower()
     if any(term in text for term in EXCLUDED_TERMS) or any(
         term in author for term in EXCLUDED_AUTHOR_TERMS
+    ):
+        return 0
+    if any(term in text for term in NON_DRESS_GARMENT_TERMS) and not any(
+        term in text for term in DRESS_FORM_TERMS
     ):
         return 0
 

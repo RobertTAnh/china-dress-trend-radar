@@ -48,6 +48,11 @@ def test_rejects_car_show_and_separate_skirt_content():
     assert not is_relevant_video("#半身裙 #气质显瘦小黑裙 #侧开叉半身裙")
 
 
+def test_rejects_tops_even_when_caption_has_strong_style_and_shopping_terms():
+    assert not is_relevant_video("辣妹风红色露肩长袖T恤女，设计感收腰内搭上衣 #网红女装测评")
+    assert not is_relevant_video("韩系条纹绑带收腰衬衫 #显瘦穿搭 #微胖穿搭测评 #大码女装")
+
+
 def test_rejects_entertainment_and_fan_accounts_by_author():
     caption = "黑色吊带纱裙造型，这气质太美啦"
     assert not is_relevant_video(caption, author_name="OG娱乐")
