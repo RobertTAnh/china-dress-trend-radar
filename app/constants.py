@@ -74,6 +74,21 @@ DEFAULT_PRODUCT_KEYWORDS = [
     ("方领蓬蓬连衣裙", "Đầm cổ vuông dáng phồng"),
 ]
 
+DEFAULT_XHS_KEYWORDS = [
+    ("生日小礼服穿搭", "Phối đầm tiệc nhỏ sinh nhật"),
+    ("一字肩连衣裙穿搭", "Phối đầm trễ vai"),
+    ("法式收腰连衣裙", "Đầm Pháp nhấn eo"),
+    ("宴会小礼服穿搭", "Phối đầm tiệc nhỏ dự tiệc"),
+]
+
+XHS_TREND_WEIGHTS = {
+    "relevance": 0.35,
+    "collect": 0.30,
+    "like": 0.20,
+    "comment": 0.05,
+    "freshness": 0.10,
+}
+
 SETTING_KEYS = {
     "usd_vnd_rate": "26000",
     "cost_per_search_usd": "0.01",
@@ -104,4 +119,9 @@ SETTING_KEYS = {
     "product_free_preview_runs_used": "0",
     "product_estimated_monthly_cost_usd": "0",
     "product_billing_month": "",
+    "xhs_trend_weight_relevance": "0.35",
+    "xhs_trend_weight_collect": "0.30",
+    "xhs_trend_weight_like": "0.20",
+    "xhs_trend_weight_comment": "0.05",
+    "xhs_trend_weight_freshness": "0.10",
 }

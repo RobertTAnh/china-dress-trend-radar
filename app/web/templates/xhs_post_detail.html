@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ card.post.title[:60] or "Bài XHS" }} · {{ app_name }}{% endblock %}
+{% block content %}
+<p class="tiny"><a href="/xhs" class="link-light">← Danh sách Xiaohongshu</a></p>
+<h1 class="h3 mb-3">{{ card.post.title or "(không tiêu đề)" }}</h1>
+<div class="row g-4">
+  <div class="col-md-4">
+    {% if card.post.cover_url|safe_url %}
+    <img class="img-fluid" src="{{ card.post.cover_url|safe_url }}" alt="" onerror="this.alt='Không tải được ảnh nguồn'; this.removeAttribute('src');">
+    {% else %}
+    <div class="panel">Không có ảnh bìa.</div>
+    {% endif %}
+  </div>
+  <div class="col-md-8">
+    <div class="panel">
+      <div class="tiny mb-2">{{ card.post.author_name or "—" }} · {{ card.post.published_at|vndate }}</div>
+      <p>{{ card.post.description }}</p>
+      <p>
+        Thích: {% if card.snapshot %}{{ card.snapshot.like_count|vnint }}{% else %}—{% endif %} ·
+        Lưu: {% if card.snapshot %}{{ card.snapshot.collect_count|vnint }}{% else %}—{% endif %} ·
+        Bình luận: {% if card.snapshot %}{{ card.snapshot.comment_count|vnint }}{% else %}—{% endif %}
+      </p>
+      <p>Tisora: {{ '%.0f'|format(card.relevance_score) }} · Xu hướng: {{ '%.1f'|format(card.trend_score) }} · {{ card.trend_label }}</p>
+      <p class="tiny">Từ khóa: {{ card.keywords|join(", ") or "—" }}</p>
+      {% if card.post.source_url|safe_url %}
+      <a class="btn btn-accent" href="{{ card.post.source_url|safe_url }}" target="_blank" rel="noopener">Mở bài gốc</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

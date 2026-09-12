@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Xiaohongshu · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Bài Xiaohongshu</h1>
+<p class="tiny mb-3">Ảnh bìa lấy từ URL công khai. Nếu nguồn chặn hotlink, khung ảnh để trống — server không tải ảnh về.</p>
+
+<form class="filter-bar row g-2 mb-3" method="get">
+  <div class="col-md-2">
+    <label class="form-label">Khoảng thời gian</label>
+    <select name="days" class="form-select">
+      <option value="7" {% if days == 7 %}selected{% endif %}>7 ngày</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>30 ngày</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Từ khóa</label>
+    <select name="keyword_id" class="form-select">
+      <option value="">Tất cả</option>
+      {% for item in keywords %}
+      <option value="{{ item.id }}" {% if keyword_id == item.id %}selected{% endif %}>{{ item.keyword }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Lưu tối thiểu</label>
+    <input class="form-control" type="number" name="min_collect" value="{{ min_collect or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Thích tối thiểu</label>
+    <input class="form-control" type="number" name="min_like" value="{{ min_like or '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Sắp xếp</label>
+    <select name="sort" class="form-select">
+      <option value="trend_score" {% if sort == "trend_score" %}selected{% endif %}>Trend score</option>
+      <option value="collect" {% if sort == "collect" %}selected{% endif %}>Lượt lưu</option>
+      <option value="published_at" {% if sort == "published_at" %}selected{% endif %}>Ngày đăng</option>
+    </select>
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="only_relevant" value="1" id="onlyRelXhs" {% if only_relevant %}checked{% endif %}>
+      <label class="form-check-label" for="onlyRelXhs">Chỉ phù hợp</label>
+    </div>
+  </div>
+  <div class="col-md-1 d-flex align-items-end">
+    <button class="btn btn-accent w-100" type="submit">Lọc</button>
+  </div>
+</form>
+
+<div class="table-responsive panel">
+  <table class="table table-dark align-middle">
+    <thead>
+      <tr>
+        <th>Ảnh</th>
+        <th>Tiêu đề</th>
+        <th>Tác giả</th>
+        <th>Ngày đăng</th>
+        <th>Thích</th>
+        <th>Lưu</th>
+        <th>Bình luận</th>
+        <th>Tisora</th>
+        <th>Xu hướng</th>
+        <th>Từ khóa</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for card in cards %}
+      <tr>
+        <td>
+          {% if card.post.cover_url|safe_url %}
+          <img class="thumb-lg" src="{{ card.post.cover_url|safe_url }}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thumb-lg',title:'Không tải được ảnh'}));">
+          {% else %}
+          <div class="thumb-lg" title="Không có ảnh"></div>
+          {% endif %}
+        </td>
+        <td class="caption">
+          <a href="/xhs/posts/{{ card.post.id }}" class="link-light">{{ card.post.title[:90] or "(không tiêu đề)" }}{% if card.post.title|length > 90 %}…{% endif %}</a>
+          <div class="tiny">
+            {% if card.trend_label == "phù hợp" %}<span class="badge text-bg-success">phù hợp</span>
+            {% elif card.trend_label == "cần xem lại" %}<span class="badge text-bg-warning">cần xem lại</span>
+            {% else %}<span class="badge text-bg-secondary">không phù hợp</span>{% endif %}
+          </div>
+        </td>
+        <td class="tiny">{{ card.post.author_name or "—" }}</td>
+        <td>{{ card.post.published_at|vndate }}</td>
+        <td>{% if card.snapshot %}{{ card.snapshot.like_count|vnint }}{% else %}—{% endif %}</td>
+        <td>{% if card.snapshot %}{{ card.snapshot.collect_count|vnint }}{% else %}—{% endif %}</td>
+        <td>{% if card.snapshot %}{{ card.snapshot.comment_count|vnint }}{% else %}—{% endif %}</td>
+        <td>{{ '%.0f'|format(card.relevance_score) }}</td>
+        <td>{{ '%.1f'|format(card.trend_score) }}</td>
+        <td class="tiny">{{ card.keywords|join(", ") }}</td>
+        <td>
+          {% if card.post.source_url|safe_url %}
+          <a class="btn btn-sm btn-outline-light" href="{{ card.post.source_url|safe_url }}" target="_blank" rel="noopener">Mở</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="11" class="text-secondary">Chưa có bài. Chạy MediaCrawler trên máy Windows rồi upload qua API ingest.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

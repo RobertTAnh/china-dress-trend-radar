@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Lần chạy Xiaohongshu · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Lịch sử ingest Xiaohongshu</h1>
+<div class="panel table-responsive">
+  <table class="table table-dark">
+    <thead>
+      <tr>
+        <th>Bắt đầu</th>
+        <th>Kết thúc</th>
+        <th>Trạng thái</th>
+        <th>client_run_id</th>
+        <th>Từ khóa</th>
+        <th>Nhận</th>
+        <th>Chấp nhận</th>
+        <th>Loại</th>
+        <th>Mới</th>
+        <th>Trùng</th>
+        <th>File</th>
+        <th>Lỗi</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for run in runs %}
+      <tr>
+        <td>{{ run.started_at|vndatetime }}</td>
+        <td>{{ run.finished_at|vndatetime }}</td>
+        <td>{{ run.status }}</td>
+        <td class="tiny">{{ run.client_run_id }}</td>
+        <td>{{ run.keyword_count|vnint }}</td>
+        <td>{{ run.received_count|vnint }}</td>
+        <td>{{ run.accepted_count|vnint }}</td>
+        <td>{{ run.rejected_count|vnint }}</td>
+        <td>{{ run.new_post_count|vnint }}</td>
+        <td>{{ run.duplicate_count|vnint }}</td>
+        <td class="tiny">{{ run.source_filename or "" }}</td>
+        <td class="tiny">{{ run.error_message or "" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="12" class="text-secondary">Chưa có lần ingest nào.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

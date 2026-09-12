@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     product_auto_schedule_enabled: bool = False
     product_mock_mode: bool = True
 
+    xhs_ingest_token: str = ""
+    xhs_ingest_max_body_mb: float = 8.0
+    xhs_max_items_per_keyword: int = 30
+    mediacrawler_path: str = r"C:\tools\MediaCrawler"
+    xhs_railway_url: str = "https://web-production-f29ae8.up.railway.app"
+
 
 @lru_cache
 def get_settings() -> Settings:

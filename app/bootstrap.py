@@ -10,7 +10,7 @@ from sqlalchemy import inspect
 
 from app.config import PROJECT_ROOT, get_settings
 from app.database import SessionLocal, engine
-from app.models import CrawlRun, ProductCrawlRun
+from app.models import CrawlRun, ProductCrawlRun, XhsCrawlRun
 from app.services.seed_defaults import seed_defaults
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,12 @@ def recover_stale_runs() -> None:
             run.status = "error"
             run.error_message = "Ứng dụng khởi động lại khi lần chạy sản phẩm chưa hoàn tất."
             run.finished_at = datetime.utcnow()
-        if stale or product_stale:
+        xhs_stale = db.query(XhsCrawlRun).filter(XhsCrawlRun.status == "running").all()
+        for run in xhs_stale:
+            run.status = "error"
+            run.error_message = "Ứng dụng khởi động lại khi lần ingest Xiaohongshu chưa hoàn tất."
+            run.finished_at = datetime.utcnow()
+        if stale or product_stale or xhs_stale:
             db.commit()
     finally:
         db.close()

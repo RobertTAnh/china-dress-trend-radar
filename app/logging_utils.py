@@ -13,6 +13,7 @@ _SECRET_PATTERNS = [
     re.compile(r"(Authorization['\"=\s:]*Bearer\s+)([^\s'\"\\]+)", re.IGNORECASE),
     re.compile(r"(TIKHUB_API_KEY['\"=\s:]+)([^\s'\"\\]+)", re.IGNORECASE),
     re.compile(r"(APIFY_TOKEN['\"=\s:]+)([^\s'\"\\]+)", re.IGNORECASE),
+    re.compile(r"(XHS_INGEST_TOKEN['\"=\s:]+)([^\s'\"\\]+)", re.IGNORECASE),
     re.compile(r"(api[_-]?key['\"=\s:]+)([^\s'\"\\]+)", re.IGNORECASE),
     re.compile(r"(token['\"=\s:]+)([^\s'\"\\]+)", re.IGNORECASE),
 ]

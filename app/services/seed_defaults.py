@@ -8,10 +8,11 @@ from app.config import get_settings
 from app.constants import (
     DEFAULT_KEYWORDS,
     DEFAULT_PRODUCT_KEYWORDS,
+    DEFAULT_XHS_KEYWORDS,
     LEGACY_KEYWORDS,
     SETTING_KEYS,
 )
-from app.models import AppSetting, Keyword, ProductKeyword
+from app.models import AppSetting, Keyword, ProductKeyword, XhsKeyword
 
 ENV_SETTING_KEYS = {
     "SCHEDULER_ENABLED": "scheduler_enabled",
@@ -62,6 +63,11 @@ def seed_defaults(db: Session) -> None:
                 settings.product_auto_schedule_enabled
             ).lower(),
             "product_mock_mode": str(settings.product_mock_mode).lower(),
+            "xhs_trend_weight_relevance": "0.35",
+            "xhs_trend_weight_collect": "0.30",
+            "xhs_trend_weight_like": "0.20",
+            "xhs_trend_weight_comment": "0.05",
+            "xhs_trend_weight_freshness": "0.10",
         }
     )
     known = {
@@ -105,6 +111,21 @@ def seed_defaults(db: Session) -> None:
                     keyword=word,
                     vietnamese_meaning=meaning,
                     enabled=True,
+                )
+            )
+        else:
+            keyword.vietnamese_meaning = meaning
+
+    existing_xhs = {row.keyword: row for row in db.query(XhsKeyword).all()}
+    for word, meaning in DEFAULT_XHS_KEYWORDS:
+        keyword = existing_xhs.get(word)
+        if keyword is None:
+            db.add(
+                XhsKeyword(
+                    keyword=word,
+                    vietnamese_meaning=meaning,
+                    enabled=True,
+                    max_results=30,
                 )
             )
         else:

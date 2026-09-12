@@ -1,4 +1,5 @@
 .env
+tools/xhs_local/config.json
 *.db
 *.sqlite
 *.sqlite3

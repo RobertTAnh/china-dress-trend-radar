@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Từ khóa Xiaohongshu · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Từ khóa Xiaohongshu</h1>
+<p class="tiny mb-3">Máy local lấy danh sách đang bật qua <code>GET /api/xhs/keywords</code>. Mỗi từ khóa tối đa 20 hoặc 30 bài. Crawl chạy trên Windows, không trên Railway.</p>
+
+<form class="panel mb-4" method="post" action="/xhs/keywords">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Từ khóa tiếng Trung</label>
+      <input class="form-control" name="keyword" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Nghĩa tiếng Việt</label>
+      <input class="form-control" name="vietnamese_meaning">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Giới hạn bài</label>
+      <select class="form-select" name="max_results">
+        <option value="20">20</option>
+        <option value="30" selected>30</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-accent w-100" type="submit">Thêm</button>
+    </div>
+  </div>
+</form>
+
+<p class="mb-3"><a class="btn btn-sm btn-outline-light" href="/api/xhs/keywords">Xuất JSON từ khóa đang bật</a></p>
+
+{% for item in keywords %}
+<form class="keyword-row" method="post" action="/xhs/keywords/{{ item.id }}/update">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Từ khóa</label>
+      <input class="form-control" name="keyword" value="{{ item.keyword }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Nghĩa tiếng Việt</label>
+      <input class="form-control" name="vietnamese_meaning" value="{{ item.vietnamese_meaning }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Giới hạn</label>
+      <select class="form-select" name="max_results">
+        <option value="20" {% if item.max_results == 20 %}selected{% endif %}>20</option>
+        <option value="30" {% if item.max_results != 20 %}selected{% endif %}>30</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Trạng thái</label>
+      <div>{% if item.enabled %}<span class="badge text-bg-success">Bật</span>{% else %}<span class="badge text-bg-secondary">Tắt</span>{% endif %}</div>
+    </div>
+    <div class="col-md-1">
+      <button class="btn btn-outline-light w-100" type="submit">Lưu</button>
+    </div>
+  </div>
+</form>
+<div class="d-flex gap-2 mb-4">
+  <form method="post" action="/xhs/keywords/{{ item.id }}/toggle">
+    <button class="btn btn-sm btn-outline-warning" type="submit">{% if item.enabled %}Tắt{% else %}Bật{% endif %}</button>
+  </form>
+  <form method="post" action="/xhs/keywords/{{ item.id }}/delete" onsubmit="return confirm('Xóa từ khóa Xiaohongshu này?');">
+    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

@@ -204,13 +204,35 @@ Hộp ngân sách trên UI ghi rõ đây là **ước tính nội bộ**, chưa 
 
 Client **không** được truyền Actor ID / `includeDetails` / limit tùy ý.
 
+## 14. Xiaohongshu (MediaCrawler trên máy Windows)
+
+Lane **song song** với Douyin video/product. Playwright **không** chạy trên Railway.
+
+1. Clone MediaCrawler ra ngoài repo (ví dụ `C:\tools\MediaCrawler`), quét QR lần đầu.
+2. Đặt biến trên máy local:
+
+```text
+MEDIACRAWLER_PATH=C:\tools\MediaCrawler
+XHS_RAILWAY_URL=https://web-production-f29ae8.up.railway.app
+XHS_INGEST_TOKEN=
+```
+
+3. Trên Railway chỉ cần `XHS_INGEST_TOKEN` (cùng giá trị). Không commit token.
+4. Quản lý từ khóa: `/xhs/keywords`. Máy local gọi `GET /api/xhs/keywords`.
+5. Mỗi tuần (hoặc thử tay): `.\tools\xhs_local\run_xhs.ps1`
+6. Kết quả: `/xhs`, `/xhs/runs`. Ảnh chỉ hiện URL công khai; server không tải media.
+
+Chi tiết từng bước, Task Scheduler Chủ nhật 09:00, và cách đăng nhập lại: [tools/xhs_local/README.md](tools/xhs_local/README.md).
+
+`POST /api/xhs/ingest` yêu cầu `Authorization: Bearer <XHS_INGEST_TOKEN>`. Upload lại cùng `client_run_id` không tạo dữ liệu trùng. Tối đa 30 bài/từ khóa.
+
 ## Chạy test
 
 ```powershell
 pytest
 ```
 
-Toàn bộ HTTP được mock. Test không gọi TikHub hoặc Apify thật.
+Toàn bộ HTTP được mock. Test không gọi TikHub, Apify hoặc Xiaohongshu thật.
 
 ## Docker
 
@@ -332,6 +354,7 @@ python -m app.cli seed
 python -m app.cli crawl
 python -m app.cli product-seed
 python -m app.cli product-crawl --keyword-id 1
+.\tools\xhs_local\run_xhs.ps1
 pytest
 npm start
 railway up
