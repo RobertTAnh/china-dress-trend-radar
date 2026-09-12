@@ -6,7 +6,7 @@ from datetime import datetime
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from app.services.product_crawler import (
     ProductCrawlInProgress,
     run_product_crawl,
 )
+from app.services.product_images import cache_product_image, cached_image_path
 from app.services.product_queries import load_product_cards, product_to_dict
 from app.services.progress import progress_store
 from app.services.queries import load_video_cards
@@ -495,6 +496,37 @@ def product_runs_page(request: Request, db: Session = Depends(get_db)):
         "product_runs.html",
         _common(request, db, {"runs": runs, "keywords": keywords, "budget": budget}),
     )
+
+
+@router.get("/products/{product_id:int}")
+def product_detail_page(product_id: int, request: Request, db: Session = Depends(get_db)):
+    card = next((item for item in load_product_cards(db) if item.product.id == product_id), None)
+    if card is None:
+        return RedirectResponse("/products?error=Không+tìm+thấy+sản+phẩm", status_code=303)
+    snapshots = sorted(
+        card.product.snapshots,
+        key=lambda item: (item.captured_at, item.id),
+        reverse=True,
+    )
+    return templates.TemplateResponse(
+        "product_detail.html",
+        _common(request, db, {"card": card, "snapshots": snapshots}),
+    )
+
+
+@router.get("/products/{product_id:int}/image")
+async def product_cached_image(product_id: int, db: Session = Depends(get_db)):
+    from app.models import Product
+
+    product = db.get(Product, product_id)
+    if product is None:
+        return Response(status_code=404)
+    path = cached_image_path(product.external_product_id)
+    if path is None and product.main_image_url:
+        path = await cache_product_image(product.external_product_id, product.main_image_url)
+    if path is None or not path.is_file():
+        return Response(status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=2592000"})
 
 
 class ProductCrawlBody(BaseModel):

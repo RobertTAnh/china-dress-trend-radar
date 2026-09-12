@@ -81,9 +81,9 @@
     {% for card in cards %}
       <tr>
         <td>
-          {% if card.product.main_image_url|safe_url %}
-          <img class="thumb-lg" src="{{ card.product.main_image_url|safe_url }}" alt="">
-          {% endif %}
+          <a href="/products/{{ card.product.id }}">
+            <img class="thumb-lg" src="/products/{{ card.product.id }}/image" alt="Ảnh {{ card.product.title[:50] }}" loading="lazy">
+          </a>
         </td>
         <td class="caption">
           {{ card.product.title[:100] }}{% if card.product.title|length > 100 %}…{% endif %}
@@ -109,9 +109,7 @@
         <td class="tiny">{{ card.keywords|join(", ") }}</td>
         <td>{{ card.product.first_seen_at|vndate }}</td>
         <td>
-          {% if card.product.product_url|safe_url %}
-          <a class="btn btn-sm btn-outline-light" href="{{ card.product.product_url|safe_url }}" target="_blank" rel="noopener">Mở</a>
-          {% endif %}
+          <a class="btn btn-sm btn-outline-light" href="/products/{{ card.product.id }}">Chi tiết</a>
         </td>
       </tr>
     {% else %}

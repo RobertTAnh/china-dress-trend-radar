@@ -36,3 +36,6 @@ body {
 }
 .table { --bs-table-bg: transparent; --bs-table-color: var(--text); }
 h1, h2 { letter-spacing: -0.02em; }
+.product-hero { width: 100%; max-height: 680px; object-fit: contain; border-radius: 12px; background: #2a2433; }
+.qr-box { width: 160px; min-width: 160px; min-height: 160px; padding: 8px; background: #fff; border-radius: 10px; }
+.qr-box img, .qr-box canvas { width: 144px !important; height: 144px !important; }

@@ -24,6 +24,7 @@ from app.models import (
     ProductSnapshot,
 )
 from app.services.product_budget import ProductBudgetGuard
+from app.services.product_images import cache_product_images
 from app.services.product_relevance import product_relevance
 
 logger = logging.getLogger(__name__)
@@ -277,6 +278,7 @@ async def run_product_crawl(
             rejected = 0
             new_count = 0
             duplicates = 0
+            images_to_cache: list[tuple[str, str]] = []
 
             for item in result.items:
                 if item.product_id in seen_ids:
@@ -323,9 +325,11 @@ async def run_product_crawl(
                     rejected += 1
                     continue
 
-                _product, created, _snapshot = upsert_product(
+                product, created, _snapshot = upsert_product(
                     db, item, keyword, captured_at, run
                 )
+                if item.main_image_url:
+                    images_to_cache.append((product.external_product_id, item.main_image_url))
                 accepted += 1
                 if created:
                     new_count += 1
@@ -339,6 +343,10 @@ async def run_product_crawl(
             run.status = "success"
             run.finished_at = datetime.utcnow()
             db.commit()
+
+            # Image failures must not fail or roll back commercial crawl data.
+            if images_to_cache and not check.mock_mode:
+                await cache_product_images(images_to_cache)
 
             logger.info(
                 "Product crawl done keyword=%s run_id=%s dataset=%s received=%s "

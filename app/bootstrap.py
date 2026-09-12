@@ -57,6 +57,7 @@ def recover_stale_runs() -> None:
 
 def bootstrap() -> None:
     Path(PROJECT_ROOT / "data").mkdir(parents=True, exist_ok=True)
+    Path(PROJECT_ROOT / "data" / "product-images").mkdir(parents=True, exist_ok=True)
     # Ensure engine can connect (creates empty sqlite file if needed).
     inspect(engine)
     run_migrations()

@@ -32,6 +32,39 @@ from app.services.product_crawler import (
 )
 from app.services.product_ranking import rank_product
 from app.services.product_relevance import product_relevance
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_product_image_cache_accepts_image_and_reuses_file(tmp_path, monkeypatch):
+    from app.services import product_images
+
+    monkeypatch.setattr(product_images, "IMAGE_DIR", tmp_path)
+    url = "https://p3-aio.ecombdimg.com/obj/example-image"
+    route = respx.get(url).mock(
+        return_value=httpx.Response(
+            200,
+            content=b"fake-jpeg-content",
+            headers={"content-type": "image/jpeg"},
+        )
+    )
+    first = await product_images.cache_product_image("product-123", url)
+    second = await product_images.cache_product_image("product-123", url)
+    assert first == second
+    assert first is not None and first.read_bytes() == b"fake-jpeg-content"
+    assert route.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_product_image_cache_rejects_untrusted_host(tmp_path, monkeypatch):
+    from app.services import product_images
+
+    monkeypatch.setattr(product_images, "IMAGE_DIR", tmp_path)
+    result = await product_images.cache_product_image(
+        "product-unsafe", "https://example.com/not-allowed.jpg"
+    )
+    assert result is None
+    assert list(tmp_path.iterdir()) == []
 from app.services.seed_defaults import set_setting
 from app.apify.normalizer import NormalizedProduct
 from datetime import datetime

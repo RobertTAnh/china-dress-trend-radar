@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết sản phẩm · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Chi tiết sản phẩm</h1>
+  <a class="btn btn-outline-light" href="/products">← Danh sách</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="panel text-center">
+      <img class="product-hero" src="/products/{{ card.product.id }}/image" alt="{{ card.product.title }}">
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <h2 class="h4">{{ card.product.title }}</h2>
+      <div class="row g-3 my-2">
+        <div class="col-6 col-md-3"><div class="label">Giá</div><div class="value small-value">{% if card.snapshot and card.snapshot.price_cny is not none %}{{ '%.2f'|format(card.snapshot.price_cny) }} CNY{% else %}—{% endif %}</div></div>
+        <div class="col-6 col-md-3"><div class="label">Bán 30 ngày</div><div class="value small-value">{% if card.snapshot %}{{ card.snapshot.monthly_sold|vnint }}{% else %}—{% endif %}</div></div>
+        <div class="col-6 col-md-3"><div class="label">Tisora</div><div class="value small-value">{{ card.relevance_score }}/100</div></div>
+        <div class="col-6 col-md-3"><div class="label">Xu hướng</div><div class="value small-value">{{ '%.1f'|format(card.rank_score) }}</div></div>
+      </div>
+      <p class="tiny mb-2">{{ card.relevance_reasons|join(' · ') }}</p>
+      <p><span class="label">Từ khóa:</span> {{ card.keywords|join(', ') }}</p>
+      <p><span class="label">Shop:</span> {{ card.product.shop_name or 'Nguồn cơ bản không cung cấp' }}</p>
+      <p><span class="label">Product ID:</span> <code id="product-id">{{ card.product.external_product_id }}</code></p>
+
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <button class="btn btn-accent" type="button" data-copy="{{ card.product.title }}">Sao chép tên Trung</button>
+        <button class="btn btn-outline-light" type="button" data-copy="{{ card.product.external_product_id }}">Sao chép Product ID</button>
+        {% if card.product.product_url|safe_url %}
+        <a class="btn btn-outline-light" href="{{ card.product.product_url|safe_url }}" target="_blank" rel="noopener">Thử mở Douyin</a>
+        {% endif %}
+      </div>
+
+      {% if card.product.product_url|safe_url %}
+      <div class="d-flex gap-3 align-items-center">
+        <div id="product-qr" class="qr-box" data-url="{{ card.product.product_url|safe_url }}"></div>
+        <div class="tiny">Quét bằng điện thoại có cài Douyin. Douyin vẫn có thể yêu cầu tài khoản đăng nhập.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel mt-4">
+  <h2 class="h5">Lịch sử theo dõi</h2>
+  <div class="table-responsive">
+    <table class="table table-dark align-middle mb-0">
+      <thead><tr><th>Thời điểm</th><th>Giá</th><th>Bán 30 ngày</th><th>Thay đổi</th><th>Vị trí tìm kiếm</th></tr></thead>
+      <tbody>
+      {% for item in snapshots %}
+        <tr>
+          <td>{{ item.captured_at|vndatetime }}</td>
+          <td>{% if item.price_cny is not none %}{{ '%.2f'|format(item.price_cny) }} CNY{% else %}—{% endif %}</td>
+          <td>{{ item.monthly_sold|vnint }}</td>
+          <td>{% if item.sales_growth_absolute is not none %}{{ item.sales_growth_absolute|vnint }}{% else %}—{% endif %}</td>
+          <td>{{ item.search_position or '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  document.querySelectorAll('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(button.dataset.copy || '');
+      const original = button.textContent;
+      button.textContent = 'Đã sao chép';
+      setTimeout(() => { button.textContent = original; }, 1200);
+    });
+  });
+  const qr = document.getElementById('product-qr');
+  if (qr && window.QRCode) {
+    new QRCode(qr, { text: qr.dataset.url, width: 144, height: 144 });
+  }
+</script>
+{% endblock %}
