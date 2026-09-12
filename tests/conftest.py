@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401 — register product tables on Base.metadata
 from app.database import Base
@@ -11,7 +12,11 @@ from app.tikhub.normalizer import NormalizedMetrics, NormalizedVideo
 
 
 def make_session() -> Session:
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     db = SessionLocal()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hmac
 import logging
 from datetime import datetime
+from uuid import uuid4
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.config import PROJECT_ROOT, get_settings
 from app.database import get_db
 from app.logging_utils import redact_secrets
-from app.models import XhsCrawlRun, XhsKeyword, XhsKeywordLink
+from app.models import XhsCrawlRun, XhsKeyword, XhsKeywordLink, XhsRemoteJob
 from app.services.xhs_ingest import ingest_xhs_payload
 from app.services.xhs_queries import load_xhs_cards, xhs_card_to_dict
 from app.web.helpers import (
@@ -39,6 +40,38 @@ templates.env.filters["safe_url"] = safe_http_url
 templates.env.autoescape = True
 
 router = APIRouter()
+def _default_remote_state() -> dict:
+    return {
+        "job_id": None,
+        "status": "idle",
+        "stage": "idle",
+        "message": "Sẵn sàng tìm kiếm",
+        "keyword": None,
+        "keyword_index": 0,
+        "keyword_total": 8,
+        "accepted_count": 0,
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+
+
+def _get_remote_state(db: Session) -> dict:
+    row = db.query(XhsRemoteJob).order_by(XhsRemoteJob.created_at.desc(), XhsRemoteJob.id.desc()).first()
+    if row is None or not isinstance(row.state_json, dict):
+        return _default_remote_state()
+    return dict(row.state_json)
+
+
+def _save_remote_state(db: Session, state: dict) -> None:
+    state["updated_at"] = datetime.utcnow().isoformat()
+    row = db.query(XhsRemoteJob).filter(XhsRemoteJob.job_id == state.get("job_id")).one_or_none()
+    if row is None:
+        row = XhsRemoteJob(job_id=state["job_id"], status=state["status"], state_json=dict(state))
+        db.add(row)
+    else:
+        row.status = state["status"]
+        row.state_json = dict(state)
+        row.updated_at = datetime.utcnow()
+    db.commit()
 
 
 def _redirect(path: str, **params) -> RedirectResponse:
@@ -101,6 +134,7 @@ def xhs_page(
                 "min_collect": min_collect,
                 "min_like": min_like,
                 "sort": sort,
+                "xhs_crawl": _get_remote_state(db),
             },
         ),
     )
@@ -278,6 +312,70 @@ def api_xhs_runs(db: Session = Depends(get_db)):
             for run in runs
         ]
     }
+
+
+@router.post("/xhs/crawl/request")
+def request_xhs_crawl(db: Session = Depends(get_db)):
+    current = _get_remote_state(db)
+    if current.get("status") in {"queued", "running", "waiting"}:
+        return _redirect("/xhs", message="Đã có một lượt RedNote đang chờ hoặc đang chạy.")
+    state = _default_remote_state()
+    state.update(
+        {
+            "job_id": f"xhs-web-{datetime.utcnow():%Y%m%d-%H%M%S}-{uuid4().hex[:6]}",
+            "status": "queued",
+            "stage": "queued",
+            "message": "Đang chờ máy tính của bạn nhận lệnh",
+            "requested_at": datetime.utcnow().isoformat(),
+        }
+    )
+    _save_remote_state(db, state)
+    return _redirect("/xhs", message="Đã gửi yêu cầu tìm kiếm tới máy tính của bạn.")
+
+
+@router.get("/api/xhs/crawl/status")
+def api_xhs_crawl_status(db: Session = Depends(get_db)):
+    return _get_remote_state(db)
+
+
+@router.post("/api/xhs/crawl/claim")
+def api_xhs_crawl_claim(request: Request, db: Session = Depends(get_db)):
+    auth_error = _check_ingest_token(request)
+    if auth_error:
+        return JSONResponse({"ok": False, "error": auth_error}, status_code=401)
+    state = _get_remote_state(db)
+    if state.get("status") != "queued":
+        return {"ok": True, "job": None}
+    state.update(
+        {
+            "status": "running",
+            "stage": "starting",
+            "message": "Máy tính đã nhận lệnh, đang mở RedNote",
+            "started_at": datetime.utcnow().isoformat(),
+        }
+    )
+    _save_remote_state(db, state)
+    return {"ok": True, "job": state}
+
+
+@router.post("/api/xhs/crawl/progress")
+async def api_xhs_crawl_progress(request: Request, db: Session = Depends(get_db)):
+    auth_error = _check_ingest_token(request)
+    if auth_error:
+        return JSONResponse({"ok": False, "error": auth_error}, status_code=401)
+    payload = await request.json()
+    state = _get_remote_state(db)
+    if not payload.get("job_id") or payload.get("job_id") != state.get("job_id"):
+        return JSONResponse({"ok": False, "error": "Job không còn hiệu lực."}, status_code=409)
+    allowed = {
+        "status", "stage", "message", "keyword", "keyword_index", "keyword_total",
+        "received_count", "accepted_count", "next_keyword_at", "error", "finished_at",
+    }
+    for key in allowed:
+        if key in payload:
+            state[key] = payload[key]
+    _save_remote_state(db, state)
+    return {"ok": True, "state": state}
 
 
 @router.get("/api/xhs/posts/{post_id}")

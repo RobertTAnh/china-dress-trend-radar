@@ -78,6 +78,19 @@ Chạy PowerShell **Run as administrator** nếu Task Scheduler yêu cầu:
 
 Lịch: Chủ nhật 09:00, chạy bù khi máy vừa bật, không chạy hai tiến trình, timeout 2 giờ. Nếu session hết hạn, script dừng và ghi hướng dẫn quét QR lại.
 
+### Nút “Tìm ngay” trên website
+
+Chạy một lần để cài bộ nhận lệnh trên Windows:
+
+```powershell
+.\tools\xhs_local\register_remote_worker.ps1
+```
+
+Sau đó, khi máy đang bật và bạn đã đăng nhập Windows, bộ nhận lệnh kiểm tra Railway
+mỗi phút. Bấm “Tìm ngay” tại `/xhs` sẽ đưa yêu cầu vào hàng đợi; trang tự cập nhật từ
+khóa đang tìm, số từ khóa đã chạy, số bài phù hợp và thời gian nghỉ còn lại. Không cần
+mở website hay cửa sổ PowerShell, nhưng máy phải có mạng và phiên RedNote còn hiệu lực.
+
 ## 7. Khi cookie / QR hết hạn
 
 1. Mở thư mục MediaCrawler.

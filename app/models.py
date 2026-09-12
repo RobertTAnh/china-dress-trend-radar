@@ -233,6 +233,17 @@ class XhsKeyword(Base):
     posts: Mapped[list["XhsKeywordLink"]] = relationship(back_populates="keyword")
 
 
+class XhsRemoteJob(Base):
+    __tablename__ = "xhs_remote_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued", nullable=False, index=True)
+    state_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+
+
 class XhsPost(Base):
     __tablename__ = "xhs_posts"
 

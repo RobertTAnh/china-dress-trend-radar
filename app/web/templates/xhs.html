@@ -1,8 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Xiaohongshu · {{ app_name }}{% endblock %}
 {% block content %}
-<h1 class="h3 mb-3">Bài Xiaohongshu</h1>
-<p class="tiny mb-3">Ảnh bìa lấy từ URL công khai. Nếu nguồn chặn hotlink, khung ảnh để trống — server không tải ảnh về.</p>
+<section class="page-hero xhs-hero">
+  <div><div class="eyebrow">REDNOTE DISCOVERY</div><h1>Xu hướng RedNote</h1><p>Tìm ảnh và video đầm tiệc phù hợp với phong cách Tisora.</p></div>
+  <form method="post" action="/xhs/crawl/request">
+    <button id="xhs-search-button" class="btn btn-accent btn-lg" type="submit" {% if xhs_crawl.status in ['queued','running','waiting'] %}disabled{% endif %}>⌕ Tìm ngay</button>
+  </form>
+</section>
+
+<section id="xhs-crawl-progress" class="xhs-progress" data-status="{{ xhs_crawl.status }}">
+  <div class="xhs-progress-top">
+    <div><span id="xhs-progress-dot" class="progress-dot"></span><strong id="xhs-progress-title">{{ xhs_crawl.message }}</strong></div>
+    <span id="xhs-progress-count">{{ xhs_crawl.keyword_index }}/{{ xhs_crawl.keyword_total }} từ khóa</span>
+  </div>
+  <div class="progress-track"><span id="xhs-progress-bar" style="width: {{ ((xhs_crawl.keyword_index / xhs_crawl.keyword_total) * 100) if xhs_crawl.keyword_total else 0 }}%"></span></div>
+  <div class="xhs-progress-details">
+    <span id="xhs-current-keyword">{% if xhs_crawl.keyword %}Đang xử lý: {{ xhs_crawl.keyword }}{% else %}Máy tính sẽ kiểm tra yêu cầu mỗi phút{% endif %}</span>
+    <span id="xhs-accepted-count">Đã giữ {{ xhs_crawl.accepted_count or 0 }} bài</span>
+    <span id="xhs-next-time"></span>
+  </div>
+</section>
 
 <form class="filter-bar row g-2 mb-3" method="get">
   <div class="col-md-2">
@@ -103,4 +120,36 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const active = new Set(["queued", "running", "waiting"]);
+  const panel = document.getElementById("xhs-crawl-progress");
+  const button = document.getElementById("xhs-search-button");
+  const title = document.getElementById("xhs-progress-title");
+  const count = document.getElementById("xhs-progress-count");
+  const bar = document.getElementById("xhs-progress-bar");
+  const keyword = document.getElementById("xhs-current-keyword");
+  const accepted = document.getElementById("xhs-accepted-count");
+  const next = document.getElementById("xhs-next-time");
+  function render(data) {
+    panel.dataset.status = data.status || "idle";
+    title.textContent = data.message || "Sẵn sàng tìm kiếm";
+    const total = Number(data.keyword_total || 8), current = Number(data.keyword_index || 0);
+    count.textContent = `${current}/${total} từ khóa`;
+    bar.style.width = `${Math.min(100, total ? current / total * 100 : 0)}%`;
+    keyword.textContent = data.keyword ? `Đang xử lý: ${data.keyword}` : (data.status === "queued" ? "Đang chờ máy tính nhận lệnh" : "Máy tính sẽ kiểm tra yêu cầu mỗi phút");
+    accepted.textContent = `Đã giữ ${Number(data.accepted_count || 0)} bài`;
+    button.disabled = active.has(data.status);
+    if (data.next_keyword_at && data.status === "waiting") {
+      const seconds = Math.max(0, Math.ceil((new Date(data.next_keyword_at) - new Date()) / 1000));
+      next.textContent = `Từ khóa tiếp theo sau ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2,"0")}`;
+    } else next.textContent = data.error || "";
+  }
+  async function poll() { try { const response = await fetch("/api/xhs/crawl/status", {cache:"no-store"}); if (response.ok) render(await response.json()); } catch (_) {} }
+  poll(); setInterval(poll, 3000);
+})();
+</script>
 {% endblock %}

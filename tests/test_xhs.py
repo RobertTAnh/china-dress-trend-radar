@@ -177,6 +177,41 @@ def test_ingest_rejects_bad_token(monkeypatch):
     assert missing.status_code == 401
 
 
+def test_remote_crawl_request_claim_and_progress(monkeypatch):
+    db = make_session()
+    client = _test_app(db, monkeypatch)
+
+    requested = client.post("/xhs/crawl/request", follow_redirects=False)
+    assert requested.status_code == 303
+    queued = client.get("/api/xhs/crawl/status").json()
+    assert queued["status"] == "queued"
+
+    unauthorized = client.post("/api/xhs/crawl/claim")
+    assert unauthorized.status_code == 401
+    claimed = client.post(
+        "/api/xhs/crawl/claim",
+        headers={"Authorization": "Bearer secret-ingest-token"},
+    ).json()["job"]
+    assert claimed["status"] == "running"
+
+    updated = client.post(
+        "/api/xhs/crawl/progress",
+        headers={"Authorization": "Bearer secret-ingest-token"},
+        json={
+            "job_id": claimed["job_id"],
+            "status": "waiting",
+            "keyword": "宴会连衣裙",
+            "keyword_index": 1,
+            "keyword_total": 8,
+            "accepted_count": 6,
+        },
+    )
+    assert updated.status_code == 200
+    status = client.get("/api/xhs/crawl/status").json()
+    assert status["keyword"] == "宴会连衣裙"
+    assert status["accepted_count"] == 6
+
+
 def test_ingest_token_not_logged(caplog, monkeypatch):
     from app.services.xhs_ingest import XhsIngestResult
 

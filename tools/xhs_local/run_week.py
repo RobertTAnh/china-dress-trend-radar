@@ -5,7 +5,7 @@ import os
 import random
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -61,6 +61,27 @@ def keyword_delay_seconds(config: dict) -> int:
     minimum = max(0, int(config.get("keyword_delay_min_seconds", 420)))
     maximum = max(minimum, int(config.get("keyword_delay_max_seconds", 540)))
     return random.randint(minimum, maximum)
+
+
+def report_remote_progress(config: dict, **fields) -> None:
+    job_id = (os.getenv("XHS_REMOTE_JOB_ID") or "").strip()
+    if not job_id:
+        return
+    railway_url = (config.get("railway_url") or "").rstrip("/")
+    token = (config.get("ingest_token") or "").strip()
+    if not railway_url or not token:
+        return
+    payload = {"job_id": job_id, **fields}
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post(
+                railway_url + "/api/xhs/crawl/progress",
+                headers={"Authorization": f"Bearer {token}"},
+                json=payload,
+            )
+        response.raise_for_status()
+    except Exception as exc:
+        logger.warning("Không gửi được tiến độ RedNote: %s", exc)
 
 
 def resolve_mediacrawler_python(mc_root: Path, configured: str = "") -> Path:
@@ -140,14 +161,34 @@ def main() -> None:
         if not keywords:
             raise SystemExit("Không có từ khóa Xiaohongshu đang bật.")
         logger.info("Từ khóa: %s", ", ".join(item.get("keyword", "") for item in keywords))
+        report_remote_progress(
+            config,
+            status="running",
+            stage="starting",
+            message=f"Đã nhận {len(keywords)} từ khóa, chuẩn bị tìm kiếm",
+            keyword_total=len(keywords),
+            accepted_count=0,
+        )
 
         client_run_id = started.strftime("xhs-%Y-%m-%d-%H%M%S")
         parts: list[Path] = []
+        total_accepted = 0
         for keyword_index, item in enumerate(keywords):
             keyword = item.get("keyword")
             if not keyword:
                 continue
             max_results = min(int(item.get("max_results") or 30), 30)
+            report_remote_progress(
+                config,
+                status="running",
+                stage="searching",
+                message=f"Đang tìm từ khóa {keyword_index + 1}/{len(keywords)}",
+                keyword=keyword,
+                keyword_index=keyword_index + 1,
+                keyword_total=len(keywords),
+                accepted_count=total_accepted,
+                next_keyword_at=None,
+            )
             try:
                 run_search(
                     mc_root,
@@ -171,12 +212,34 @@ def main() -> None:
                 max_age_days=7,
             )
             parts.append(part)
+            part_data = json.loads(part.read_text(encoding="utf-8"))
+            part_count = sum(len(batch.get("items") or []) for batch in part_data.get("keywords") or [])
+            total_accepted += part_count
+            report_remote_progress(
+                config,
+                status="running",
+                stage="keyword_done",
+                message=f"Xong từ khóa {keyword_index + 1}/{len(keywords)} · giữ {part_count} bài",
+                keyword=keyword,
+                keyword_index=keyword_index + 1,
+                keyword_total=len(keywords),
+                accepted_count=total_accepted,
+            )
             if keyword_index < len(keywords) - 1:
                 delay = keyword_delay_seconds(config)
                 logger.info(
                     "Nghỉ %s giây (%.1f phút) trước từ khóa tiếp theo để giảm tải RedNote.",
                     delay,
                     delay / 60,
+                )
+                next_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                report_remote_progress(
+                    config,
+                    status="waiting",
+                    stage="waiting",
+                    message=f"Đang nghỉ {delay / 60:.1f} phút trước từ khóa tiếp theo",
+                    next_keyword_at=next_at.isoformat(),
+                    accepted_count=total_accepted,
                 )
                 time.sleep(delay)
 
@@ -186,6 +249,18 @@ def main() -> None:
             raise SystemExit(3)
         upload_file(payload_path, railway_url, token)
         finished = datetime.now(timezone.utc)
+        report_remote_progress(
+            config,
+            status="completed",
+            stage="completed",
+            message=f"Hoàn tất {len(keywords)} từ khóa · giữ {total_accepted} bài",
+            keyword=None,
+            keyword_index=len(keywords),
+            keyword_total=len(keywords),
+            accepted_count=total_accepted,
+            next_keyword_at=None,
+            finished_at=finished.isoformat(),
+        )
         logger.info("Hoàn tất started=%s finished=%s", started.isoformat(), finished.isoformat())
     finally:
         release_lock()
