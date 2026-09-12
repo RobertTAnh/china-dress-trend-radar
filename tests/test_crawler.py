@@ -14,7 +14,8 @@ async def test_mock_crawl_dedup_and_snapshots():
     assert run.status in {"success", "budget_stopped"}
     assert run.request_count > 0
     video_count = db.query(Video).count()
-    assert video_count >= 10
+    # The production profile intentionally keeps only three proven keywords.
+    assert video_count >= 6
     links = db.query(VideoKeyword).count()
     assert links >= video_count
     snap_count = db.query(Snapshot).count()
