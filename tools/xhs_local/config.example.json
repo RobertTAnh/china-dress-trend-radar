@@ -8,6 +8,7 @@
   "enable_get_sub_comments": false,
   "download_media": false,
   "login_type": "qrcode",
+  "xhs_international": true,
   "fallback_keywords": [
     {
       "keyword": "生日小礼服穿搭",

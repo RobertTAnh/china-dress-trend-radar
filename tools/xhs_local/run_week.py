@@ -31,6 +31,15 @@ def load_config() -> dict:
     )
     data["railway_url"] = os.getenv("XHS_RAILWAY_URL", data.get("railway_url", ""))
     data["ingest_token"] = os.getenv("XHS_INGEST_TOKEN", data.get("ingest_token", ""))
+    international_raw = os.getenv(
+        "XHS_INTERNATIONAL", str(data.get("xhs_international", True))
+    )
+    data["xhs_international"] = international_raw.strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
     return data
 
 
@@ -120,7 +129,13 @@ def main() -> None:
                 continue
             max_results = min(int(item.get("max_results") or 30), 30)
             try:
-                run_search(mc_root, keyword, max_results, str(mc_python))
+                run_search(
+                    mc_root,
+                    keyword,
+                    max_results,
+                    str(mc_python),
+                    international=bool(config.get("xhs_international", True)),
+                )
             except SystemExit:
                 raise
             except Exception as exc:
@@ -132,6 +147,7 @@ def main() -> None:
                 keyword,
                 max_results=max_results,
                 client_run_id=f"{client_run_id}-{keyword}",
+                international=bool(config.get("xhs_international", True)),
             )
             parts.append(part)
 

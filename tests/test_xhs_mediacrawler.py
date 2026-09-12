@@ -17,7 +17,7 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "base_config.py").write_text(
-        "ENABLE_GET_COMMENTS = True\nCRAWLER_MAX_NOTES_COUNT = 10\n",
+        "ENABLE_GET_COMMENTS = True\nCRAWLER_MAX_NOTES_COUNT = 10\nXHS_INTERNATIONAL = False\n",
         encoding="utf-8",
     )
     xhs_config = config_dir / "xhs_config.py"
@@ -29,3 +29,4 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
     base_config = (config_dir / "base_config.py").read_text(encoding="utf-8")
     assert "ENABLE_GET_COMMENTS = False" in base_config
     assert "CRAWLER_MAX_NOTES_COUNT = 25" in base_config
+    assert "XHS_INTERNATIONAL = True" in base_config

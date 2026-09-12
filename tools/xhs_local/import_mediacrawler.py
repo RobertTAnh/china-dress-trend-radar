@@ -62,6 +62,7 @@ def import_sources(
     keyword: str,
     max_results: int = 30,
     client_run_id: str | None = None,
+    international: bool = True,
 ) -> Path:
     OUTBOX.mkdir(parents=True, exist_ok=True)
     files = collect_source_files(source_dir)
@@ -72,7 +73,18 @@ def import_sources(
     accepted_items: list[dict] = []
     rejected = 0
     seen: set[str] = set()
-    for index, raw in enumerate(raw_items, start=1):
+    keyword_items = [
+        item
+        for item in raw_items
+        if not item.get("source_keyword") or item.get("source_keyword") == keyword
+    ]
+    for index, source_raw in enumerate(keyword_items, start=1):
+        raw = dict(source_raw)
+        if international:
+            note_url = str(raw.get("note_url") or "")
+            raw["note_url"] = note_url.replace(
+                "https://www.xiaohongshu.com/", "https://www.rednote.com/", 1
+            )
         normalized, error = normalize_xhs_item(raw, keyword=keyword, search_position=index)
         if normalized is None or error:
             rejected += 1
@@ -118,7 +130,7 @@ def import_sources(
         "Imported keyword=%s files=%s received=%s accepted=%s rejected=%s out=%s",
         keyword,
         len(files),
-        len(raw_items),
+        len(keyword_items),
         len(accepted_items),
         rejected,
         out_path,
@@ -156,6 +168,7 @@ def main() -> None:
         args.keyword,
         max_results=min(max(args.max_results, 1), 30),
         client_run_id=args.client_run_id or None,
+        international=True,
     )
     print(path)
 

@@ -48,6 +48,7 @@ cd "c:\1 code app\tool check video hot douyin"
 $env:MEDIACRAWLER_PATH="C:\tools\MediaCrawler"
 $env:XHS_RAILWAY_URL="https://web-production-f29ae8.up.railway.app"
 $env:XHS_INGEST_TOKEN="token_cua_ban"
+$env:XHS_INTERNATIONAL="true"
 .\tools\xhs_local\run_xhs.ps1
 ```
 
@@ -83,6 +84,9 @@ Lịch: Chủ nhật 09:00, chạy bù khi máy vừa bật, không chạy hai t
 2. Chạy lại theo README của họ và **quét QR**.
 3. Không nhờ script vượt captcha.
 4. Chạy lại `run_xhs.ps1`.
+
+Mặc định tool dùng `rednote.com` (`XHS_INTERNATIONAL=true`), đúng với giao diện RedNote
+quốc tế. Chỉ đặt `false` nếu tài khoản của bạn thực sự dùng được bản Xiaohongshu Trung Quốc.
 
 Nếu log báo `tài khoản không có quyền dùng tìm kiếm web`, QR và crawler đã hoạt động
 nhưng Xiaohongshu đang giới hạn tài khoản đó trên website. Hãy thử tìm trực tiếp trên
