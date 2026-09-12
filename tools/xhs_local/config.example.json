@@ -3,7 +3,9 @@
   "mediacrawler_python": "C:\\tools\\MediaCrawler\\.venv\\Scripts\\python.exe",
   "railway_url": "https://web-production-f29ae8.up.railway.app",
   "ingest_token": "",
-  "max_notes_per_keyword": 30,
+  "max_notes_per_keyword": 20,
+  "keyword_delay_min_seconds": 420,
+  "keyword_delay_max_seconds": 540,
   "enable_get_comments": false,
   "enable_get_sub_comments": false,
   "download_media": false,
@@ -12,7 +14,35 @@
   "fallback_keywords": [
     {
       "keyword": "生日小礼服穿搭",
-      "max_results": 30
+      "max_results": 20
+    },
+    {
+      "keyword": "一字肩连衣裙穿搭",
+      "max_results": 20
+    },
+    {
+      "keyword": "法式收腰连衣裙",
+      "max_results": 20
+    },
+    {
+      "keyword": "宴会小礼服穿搭",
+      "max_results": 20
+    },
+    {
+      "keyword": "宴会连衣裙",
+      "max_results": 20
+    },
+    {
+      "keyword": "聚会小礼服",
+      "max_results": 20
+    },
+    {
+      "keyword": "生日礼服裙",
+      "max_results": 20
+    },
+    {
+      "keyword": "约会小礼服",
+      "max_results": 20
     }
   ]
 }

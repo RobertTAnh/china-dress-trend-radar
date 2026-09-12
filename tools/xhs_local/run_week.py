@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,7 +42,25 @@ def load_config() -> dict:
         "no",
         "off",
     }
+    data["keyword_delay_min_seconds"] = int(
+        os.getenv(
+            "XHS_KEYWORD_DELAY_MIN_SECONDS",
+            data.get("keyword_delay_min_seconds", 420),
+        )
+    )
+    data["keyword_delay_max_seconds"] = int(
+        os.getenv(
+            "XHS_KEYWORD_DELAY_MAX_SECONDS",
+            data.get("keyword_delay_max_seconds", 540),
+        )
+    )
     return data
+
+
+def keyword_delay_seconds(config: dict) -> int:
+    minimum = max(0, int(config.get("keyword_delay_min_seconds", 420)))
+    maximum = max(minimum, int(config.get("keyword_delay_max_seconds", 540)))
+    return random.randint(minimum, maximum)
 
 
 def resolve_mediacrawler_python(mc_root: Path, configured: str = "") -> Path:
@@ -123,7 +143,7 @@ def main() -> None:
 
         client_run_id = started.strftime("xhs-%Y-%m-%d-%H%M%S")
         parts: list[Path] = []
-        for item in keywords:
+        for keyword_index, item in enumerate(keywords):
             keyword = item.get("keyword")
             if not keyword:
                 continue
@@ -151,6 +171,14 @@ def main() -> None:
                 max_age_days=7,
             )
             parts.append(part)
+            if keyword_index < len(keywords) - 1:
+                delay = keyword_delay_seconds(config)
+                logger.info(
+                    "Nghỉ %s giây (%.1f phút) trước từ khóa tiếp theo để giảm tải RedNote.",
+                    delay,
+                    delay / 60,
+                )
+                time.sleep(delay)
 
         payload_path = merge_keyword_payloads(parts, client_run_id)
         if not railway_url or not token:

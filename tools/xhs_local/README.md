@@ -92,6 +92,10 @@ Lượt chạy hàng tuần dùng bộ lọc: nhiều lượt thích nhất, l�
 trong 7 ngày, không giới hạn phạm vi và vị trí. Tool giữ trường loại bài để giao diện
 phân biệt ảnh/video và kiểm tra lại ngày đăng trước khi upload.
 
+Mặc định chạy 8 từ khóa, tối đa 20 bài/từ khóa. Tool nghỉ ngẫu nhiên 7–9 phút giữa
+hai từ khóa (trung bình khoảng 8 phút). Nếu RedNote trả captcha/mã 461, toàn bộ lượt
+chạy dừng và không upload kết quả thiếu.
+
 Nếu log báo `tài khoản không có quyền dùng tìm kiếm web`, QR và crawler đã hoạt động
 nhưng Xiaohongshu đang giới hạn tài khoản đó trên website. Hãy thử tìm trực tiếp trên
 `xiaohongshu.com` bằng cùng tài khoản. Nếu website cũng lỗi, cần dùng tài khoản khác có

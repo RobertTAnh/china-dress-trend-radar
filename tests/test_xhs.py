@@ -223,6 +223,8 @@ def test_seed_creates_xhs_keywords():
     words = {row.keyword for row in db.query(XhsKeyword).all()}
     assert "生日小礼服穿搭" in words
     assert "宴会小礼服穿搭" in words
+    assert len(words) == 8
+    assert {row.max_results for row in db.query(XhsKeyword).all()} == {20}
 
 
 def test_resolve_mediacrawler_python_prefers_its_own_venv(tmp_path):

@@ -28,6 +28,12 @@ PERMISSION_HINTS = (
     "permission denied",
 )
 
+CAPTCHA_HINTS = (
+    "captcha appeared",
+    "verifytype",
+    "461 unknown status",
+)
+
 
 def detect_session_issue(text: str) -> bool:
     lowered = text.lower()
@@ -41,6 +47,11 @@ def detect_session_issue(text: str) -> bool:
 def detect_permission_issue(text: str) -> bool:
     lowered = text.lower()
     return any(hint in lowered for hint in PERMISSION_HINTS)
+
+
+def detect_captcha_issue(text: str) -> bool:
+    lowered = text.lower()
+    return any(hint in lowered for hint in CAPTCHA_HINTS)
 
 
 def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = True) -> None:
@@ -161,6 +172,12 @@ def run_search(
     logger.info("MediaCrawler exit=%s", proc.returncode)
     for line in output.splitlines()[-80:]:
         logger.info("mc: %s", line)
+    if detect_captcha_issue(output):
+        logger.error(
+            "RedNote đã yêu cầu captcha (mã 461). Dừng toàn bộ lượt chạy và không upload "
+            "kết quả thiếu; hãy xác minh thủ công trước lần chạy sau."
+        )
+        raise SystemExit(2)
     if proc.returncode != 0 and detect_permission_issue(output):
         logger.error(
             "Đã đăng nhập Xiaohongshu nhưng tài khoản không có quyền dùng tìm kiếm web. "

@@ -79,6 +79,10 @@ DEFAULT_XHS_KEYWORDS = [
     ("一字肩连衣裙穿搭", "Phối đầm trễ vai"),
     ("法式收腰连衣裙", "Đầm Pháp nhấn eo"),
     ("宴会小礼服穿搭", "Phối đầm tiệc nhỏ dự tiệc"),
+    ("宴会连衣裙", "Đầm dự tiệc"),
+    ("聚会小礼服", "Đầm tiệc nhỏ"),
+    ("生日礼服裙", "Đầm tiệc sinh nhật"),
+    ("约会小礼服", "Đầm đẹp đi hẹn hò"),
 ]
 
 XHS_TREND_WEIGHTS = {

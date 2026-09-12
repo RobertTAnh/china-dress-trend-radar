@@ -2,9 +2,14 @@ from pathlib import Path
 
 from tools.xhs_local.run_mediacrawler import (
     detect_permission_issue,
+    detect_captcha_issue,
     detect_session_issue,
     patch_mediacrawler_config,
 )
+
+
+def test_captcha_461_is_detected_even_when_crawler_can_exit_zero() -> None:
+    assert detect_captcha_issue("CAPTCHA appeared, Response: <Response [461 Unknown Status]>")
 
 
 def test_permission_error_is_detected_separately_from_successful_login() -> None:

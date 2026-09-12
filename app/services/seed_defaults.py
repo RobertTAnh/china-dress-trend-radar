@@ -125,11 +125,13 @@ def seed_defaults(db: Session) -> None:
                     keyword=word,
                     vietnamese_meaning=meaning,
                     enabled=True,
-                    max_results=30,
+                    max_results=20,
                 )
             )
         else:
             keyword.vietnamese_meaning = meaning
+            keyword.enabled = True
+            keyword.max_results = 20
     db.flush()
     sync_runtime_env(db)
     db.commit()
