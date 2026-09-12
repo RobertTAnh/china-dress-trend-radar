@@ -25,8 +25,28 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
 
     patch_mediacrawler_config(tmp_path, 25)
 
-    assert 'SORT_TYPE = "general"' in xhs_config.read_text(encoding="utf-8")
+    assert 'SORT_TYPE = "popularity_descending"' in xhs_config.read_text(encoding="utf-8")
     base_config = (config_dir / "base_config.py").read_text(encoding="utf-8")
     assert "ENABLE_GET_COMMENTS = False" in base_config
     assert "CRAWLER_MAX_NOTES_COUNT = 25" in base_config
     assert "XHS_INTERNATIONAL = True" in base_config
+
+
+def test_patch_adds_server_side_video_filter(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "base_config.py").write_text("XHS_INTERNATIONAL = False\n", encoding="utf-8")
+    xhs_dir = tmp_path / "media_platform" / "xhs"
+    xhs_dir.mkdir(parents=True)
+    core = xhs_dir / "core.py"
+    core.write_text(
+        'from .field import SearchSortType\n'
+        '                        sort=(SearchSortType(config.SORT_TYPE) if config.SORT_TYPE != "" else SearchSortType.GENERAL),\n',
+        encoding="utf-8",
+    )
+
+    patch_mediacrawler_config(tmp_path, 20)
+    patched = core.read_text(encoding="utf-8")
+
+    assert "SearchSortType, SearchNoteType" in patched
+    assert "note_type=SearchNoteType.VIDEO" in patched

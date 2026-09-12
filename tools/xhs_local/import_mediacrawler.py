@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -63,6 +63,8 @@ def import_sources(
     max_results: int = 30,
     client_run_id: str | None = None,
     international: bool = True,
+    media_type: str | None = None,
+    max_age_days: int | None = None,
 ) -> Path:
     OUTBOX.mkdir(parents=True, exist_ok=True)
     files = collect_source_files(source_dir)
@@ -90,6 +92,25 @@ def import_sources(
             rejected += 1
             logger.info("Import reject position=%s reason=%s", index, error)
             continue
+        if media_type and normalized.media_type != media_type:
+            rejected += 1
+            logger.info(
+                "Import reject position=%s reason=Loại bài %s, yêu cầu %s",
+                index,
+                normalized.media_type,
+                media_type,
+            )
+            continue
+        if max_age_days is not None:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=max_age_days)
+            if normalized.published_at is None or normalized.published_at < cutoff:
+                rejected += 1
+                logger.info(
+                    "Import reject position=%s reason=Bài cũ hơn %s ngày hoặc thiếu ngày đăng",
+                    index,
+                    max_age_days,
+                )
+                continue
         if normalized.external_post_id in seen:
             continue
         seen.add(normalized.external_post_id)

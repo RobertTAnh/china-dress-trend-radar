@@ -86,15 +86,37 @@ def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = 
         for line in xhs_text.splitlines():
             if line.strip().startswith("SORT_TYPE") and "=" in line:
                 indent = line[: len(line) - len(line.lstrip())]
-                xhs_lines.append(f'{indent}SORT_TYPE = "general"')
+                xhs_lines.append(f'{indent}SORT_TYPE = "popularity_descending"')
             else:
                 xhs_lines.append(line)
         xhs_config_path.write_text("\n".join(xhs_lines) + "\n", encoding="utf-8")
     logger.info(
-        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=general, site=%s",
+        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=most_liked, type=video, site=%s",
         max_notes,
         "rednote.com" if international else "xiaohongshu.com",
     )
+
+    # MediaCrawler's client supports note_type but its crawler currently omits
+    # that argument. Patch this small gap idempotently so RedNote filters on the
+    # server before note details are requested.
+    core_path = root / "media_platform" / "xhs" / "core.py"
+    if core_path.exists():
+        core_text = core_path.read_text(encoding="utf-8")
+        core_text = core_text.replace(
+            "from .field import SearchSortType",
+            "from .field import SearchSortType, SearchNoteType",
+        )
+        sort_call = (
+            'sort=(SearchSortType(config.SORT_TYPE) if config.SORT_TYPE != "" '
+            "else SearchSortType.GENERAL),"
+        )
+        if sort_call in core_text and "note_type=SearchNoteType.VIDEO" not in core_text:
+            core_text = core_text.replace(
+                sort_call,
+                sort_call + "\n                        note_type=SearchNoteType.VIDEO,",
+                1,
+            )
+        core_path.write_text(core_text, encoding="utf-8")
 
 
 def run_search(
