@@ -23,6 +23,7 @@ Trong thư mục China Dress Trend Radar, sao chép `.env.example` thành `.env`
 
 ```text
 MEDIACRAWLER_PATH=C:\tools\MediaCrawler
+MEDIACRAWLER_PYTHON=C:\tools\MediaCrawler\.venv\Scripts\python.exe
 XHS_RAILWAY_URL=https://web-production-f29ae8.up.railway.app
 XHS_INGEST_TOKEN=dat_token_giong_tren_Railway
 ```

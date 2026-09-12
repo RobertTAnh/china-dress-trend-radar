@@ -1,5 +1,6 @@
 {
   "mediacrawler_path": "C:\\tools\\MediaCrawler",
+  "mediacrawler_python": "C:\\tools\\MediaCrawler\\.venv\\Scripts\\python.exe",
   "railway_url": "https://web-production-f29ae8.up.railway.app",
   "ingest_token": "",
   "max_notes_per_keyword": 30,

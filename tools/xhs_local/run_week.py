@@ -26,9 +26,31 @@ def load_config() -> dict:
     if CONFIG_PATH.exists():
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     data["mediacrawler_path"] = os.getenv("MEDIACRAWLER_PATH", data.get("mediacrawler_path", r"C:\tools\MediaCrawler"))
+    data["mediacrawler_python"] = os.getenv(
+        "MEDIACRAWLER_PYTHON", data.get("mediacrawler_python", "")
+    )
     data["railway_url"] = os.getenv("XHS_RAILWAY_URL", data.get("railway_url", ""))
     data["ingest_token"] = os.getenv("XHS_INGEST_TOKEN", data.get("ingest_token", ""))
     return data
+
+
+def resolve_mediacrawler_python(mc_root: Path, configured: str = "") -> Path:
+    candidates = []
+    if configured.strip():
+        candidates.append(Path(configured.strip()))
+    candidates.extend(
+        [
+            mc_root / ".venv" / "Scripts" / "python.exe",
+            mc_root / "venv" / "Scripts" / "python.exe",
+        ]
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise SystemExit(
+        "Không thấy Python riêng của MediaCrawler. Hãy tạo bằng: "
+        f'python -m venv "{mc_root / ".venv"}" rồi cài requirements.txt.'
+    )
 
 
 def acquire_lock() -> None:
@@ -75,12 +97,15 @@ def main() -> None:
         mc_root = Path(config["mediacrawler_path"])
         railway_url = (config.get("railway_url") or "").strip()
         token = (config.get("ingest_token") or "").strip()
-        python_exe = sys.executable
+        mc_python = resolve_mediacrawler_python(
+            mc_root, str(config.get("mediacrawler_python") or "")
+        )
         logger.info("Bắt đầu crawl Xiaohongshu local started=%s", started.isoformat())
         if not mc_root.exists():
             raise SystemExit(f"Không thấy MediaCrawler tại {mc_root}. Clone repo ra ngoài project.")
         if not (mc_root / "main.py").exists():
             raise SystemExit(f"{mc_root} thiếu main.py — kiểm tra clone MediaCrawler.")
+        logger.info("MediaCrawler Python: %s", mc_python)
 
         keywords = fetch_keywords(railway_url, config.get("fallback_keywords") or [])
         if not keywords:
@@ -95,7 +120,7 @@ def main() -> None:
                 continue
             max_results = min(int(item.get("max_results") or 30), 30)
             try:
-                run_search(mc_root, keyword, max_results, python_exe)
+                run_search(mc_root, keyword, max_results, str(mc_python))
             except SystemExit:
                 raise
             except Exception as exc:

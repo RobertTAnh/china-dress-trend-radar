@@ -17,10 +17,10 @@ if (Test-Path $LockFile) {
   exit 1
 }
 
-$Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-if (-not (Test-Path $Python)) {
-  $Python = (Get-Command py -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
-  if (-not $Python) { $Python = "python" }
+$AppPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+if (-not (Test-Path $AppPython)) {
+  Write-XhsLog "Khong thay Python cua app tai $AppPython. Hay tao lai .venv va cai requirements-dev.txt."
+  exit 1
 }
 
 $McPath = $env:MEDIACRAWLER_PATH
@@ -30,23 +30,31 @@ if (-not (Test-Path $McPath)) {
   exit 1
 }
 
-Write-XhsLog "Kiem tra Python: $Python"
-& $Python -c "import sys; print(sys.version)"
+Write-XhsLog "Kiem tra Python cua app: $AppPython"
+& $AppPython -c "import sys; print(sys.version)"
 if ($LASTEXITCODE -ne 0) {
-  Write-XhsLog "Python khong chay duoc."
+  Write-XhsLog "Python cua app khong chay duoc."
   exit 1
 }
 
-Write-XhsLog "Kiem tra Playwright..."
-& $Python -c "import playwright; print('playwright-ok')"
+$McPython = $env:MEDIACRAWLER_PYTHON
+if (-not $McPython) { $McPython = Join-Path $McPath ".venv\Scripts\python.exe" }
+if (-not (Test-Path $McPython)) {
+  Write-XhsLog "Khong thay Python rieng cua MediaCrawler tai $McPython."
+  exit 1
+}
+$env:MEDIACRAWLER_PYTHON = $McPython
+
+Write-XhsLog "Kiem tra MediaCrawler Python va Playwright: $McPython"
+& $McPython -c "import sys, playwright; print(sys.version); print('playwright-ok')"
 if ($LASTEXITCODE -ne 0) {
-  Write-XhsLog "Thieu Playwright. Cai trong MediaCrawler: pip install playwright && playwright install chromium"
+  Write-XhsLog "Python MediaCrawler loi hoac thieu Playwright. Cai requirements.txt trong .venv cua MediaCrawler."
   exit 1
 }
 
 $env:PYTHONPATH = $ProjectRoot
 Write-XhsLog "Bat dau run_week.py"
-& $Python (Join-Path $PSScriptRoot "run_week.py")
+& $AppPython (Join-Path $PSScriptRoot "run_week.py")
 $code = $LASTEXITCODE
 if ($code -eq 2) {
   Write-XhsLog "Session Xiaohongshu het han hoac gap captcha. Mo MediaCrawler va quet QR lai. Khong tu vuot captcha."

@@ -223,3 +223,23 @@ def test_seed_creates_xhs_keywords():
     words = {row.keyword for row in db.query(XhsKeyword).all()}
     assert "生日小礼服穿搭" in words
     assert "宴会小礼服穿搭" in words
+
+
+def test_resolve_mediacrawler_python_prefers_its_own_venv(tmp_path):
+    from tools.xhs_local.run_week import resolve_mediacrawler_python
+
+    expected = tmp_path / ".venv" / "Scripts" / "python.exe"
+    expected.parent.mkdir(parents=True)
+    expected.write_text("", encoding="utf-8")
+
+    assert resolve_mediacrawler_python(tmp_path) == expected
+
+
+def test_resolve_mediacrawler_python_honors_configured_path(tmp_path):
+    from tools.xhs_local.run_week import resolve_mediacrawler_python
+
+    configured = tmp_path / "custom" / "python.exe"
+    configured.parent.mkdir(parents=True)
+    configured.write_text("", encoding="utf-8")
+
+    assert resolve_mediacrawler_python(tmp_path, str(configured)) == configured
