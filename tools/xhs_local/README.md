@@ -84,6 +84,11 @@ Lịch: Chủ nhật 09:00, chạy bù khi máy vừa bật, không chạy hai t
 3. Không nhờ script vượt captcha.
 4. Chạy lại `run_xhs.ps1`.
 
+Nếu log báo `tài khoản không có quyền dùng tìm kiếm web`, QR và crawler đã hoạt động
+nhưng Xiaohongshu đang giới hạn tài khoản đó trên website. Hãy thử tìm trực tiếp trên
+`xiaohongshu.com` bằng cùng tài khoản. Nếu website cũng lỗi, cần dùng tài khoản khác có
+lịch sử sử dụng bình thường; đổi từ khóa hoặc chạy lại không khắc phục được lỗi quyền này.
+
 ## Giới hạn
 
 - Tối đa 30 bài / từ khóa

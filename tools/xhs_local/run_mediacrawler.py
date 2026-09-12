@@ -22,10 +22,25 @@ SESSION_HINTS = (
     "session expired",
 )
 
+PERMISSION_HINTS = (
+    "没有权限访问",
+    "no permission",
+    "permission denied",
+)
+
 
 def detect_session_issue(text: str) -> bool:
     lowered = text.lower()
+    # Successful-login messages also contain words such as "login" and
+    # "cookie". They must not turn an unrelated crawler error into a QR error.
+    if "login successful" in lowered or "login success" in lowered:
+        return False
     return any(hint in lowered for hint in SESSION_HINTS)
+
+
+def detect_permission_issue(text: str) -> bool:
+    lowered = text.lower()
+    return any(hint in lowered for hint in PERMISSION_HINTS)
 
 
 def patch_mediacrawler_config(root: Path, max_notes: int) -> None:
@@ -59,7 +74,25 @@ def patch_mediacrawler_config(root: Path, max_notes: int) -> None:
         if not replaced:
             lines.append(line)
     config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    logger.info("Patched MediaCrawler config: comments off, media off, max_notes=%s", max_notes)
+
+    # The popularity sort can be unavailable to some otherwise valid web
+    # accounts. General search is the least restrictive mode and is sufficient
+    # because this project scores/ranks the returned notes itself.
+    xhs_config_path = root / "config" / "xhs_config.py"
+    if xhs_config_path.exists():
+        xhs_text = xhs_config_path.read_text(encoding="utf-8")
+        xhs_lines = []
+        for line in xhs_text.splitlines():
+            if line.strip().startswith("SORT_TYPE") and "=" in line:
+                indent = line[: len(line) - len(line.lstrip())]
+                xhs_lines.append(f'{indent}SORT_TYPE = "general"')
+            else:
+                xhs_lines.append(line)
+        xhs_config_path.write_text("\n".join(xhs_lines) + "\n", encoding="utf-8")
+    logger.info(
+        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=general",
+        max_notes,
+    )
 
 
 def run_search(root: Path, keyword: str, max_notes: int, python_exe: str, login_type: str = "qrcode") -> int:
@@ -95,6 +128,13 @@ def run_search(root: Path, keyword: str, max_notes: int, python_exe: str, login_
     logger.info("MediaCrawler exit=%s", proc.returncode)
     for line in output.splitlines()[-80:]:
         logger.info("mc: %s", line)
+    if proc.returncode != 0 and detect_permission_issue(output):
+        logger.error(
+            "Đã đăng nhập Xiaohongshu nhưng tài khoản không có quyền dùng tìm kiếm web. "
+            "Hãy thử tìm kiếm trực tiếp trên xiaohongshu.com bằng cùng tài khoản; nếu vẫn bị chặn, "
+            "cần đổi sang tài khoản khác đã dùng ổn định tại Trung Quốc."
+        )
+        raise SystemExit(3)
     if proc.returncode != 0 and detect_session_issue(output):
         logger.error(
             "Session Xiaohongshu hết hạn hoặc gặp captcha. "
