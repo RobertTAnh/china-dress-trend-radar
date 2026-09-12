@@ -1,45 +1,15 @@
 {% if not cards %}
-<p class="text-secondary">Chưa đủ dữ liệu xếp hạng. Hãy seed dữ liệu mẫu hoặc chạy thu thập hai lần.</p>
+<div class="empty-state"><span>◇</span><strong>Chưa đủ dữ liệu xếp hạng</strong><small>Chạy thu thập ít nhất hai lần để so sánh tăng trưởng.</small></div>
 {% else %}
-<div class="table-responsive">
-  <table class="table table-dark table-sm align-middle">
-    <thead>
-      <tr>
-        <th>Video</th>
-        <th>Tác giả</th>
-        <th>Score</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for card in cards %}
-      <tr>
-        <td>
-          <div class="d-flex gap-2">
-            {% if card.video.cover_url|safe_url %}
-            <img class="thumb" src="{{ card.video.cover_url|safe_url }}" alt="">
-            {% endif %}
-            <div>
-              <div class="caption">{{ card.video.caption[:80] }}{% if card.video.caption|length > 80 %}…{% endif %}</div>
-              <div class="tiny">{{ card.keywords|join(", ") }}</div>
-            </div>
-          </div>
-        </td>
-        <td>{{ card.video.author_name }}</td>
-        <td>
-          {% if card.trend %}
-            {{ "%.2f"|format(card.trend.trend_score) }}
-            {% if card.trend.needs_review %}<span class="badge text-bg-warning">Kiểm tra</span>{% endif %}
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if card.video.source_url|safe_url %}
-          <a class="btn btn-sm btn-outline-light" href="{{ card.video.source_url|safe_url }}" target="_blank" rel="noopener noreferrer">Mở trên Douyin</a>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<div class="trend-list">
+  {% for card in cards %}
+  <article class="trend-item">
+    <div class="trend-rank">{% if loop.index < 10 %}0{% endif %}{{ loop.index }}</div>
+    {% if card.video.cover_url|safe_url %}<img class="trend-thumb" src="{{ card.video.cover_url|safe_url }}" alt="Ảnh bìa {{ card.video.caption[:40] }}" loading="lazy">{% else %}<div class="trend-thumb thumb-placeholder">◇</div>{% endif %}
+    <div class="trend-content"><div class="trend-caption">{{ card.video.caption[:72] }}{% if card.video.caption|length > 72 %}…{% endif %}</div><div class="trend-meta"><span>{{ card.video.author_name or "Không rõ tác giả" }}</span>{% if card.keywords %}<span>{{ card.keywords[0] }}</span>{% endif %}</div></div>
+    <div class="trend-score"><strong>{% if card.trend %}{{ "%.1f"|format(card.trend.trend_score) }}{% else %}—{% endif %}</strong><small>điểm</small></div>
+    {% if card.video.source_url|safe_url %}<a class="icon-button" href="{{ card.video.source_url|safe_url }}" target="_blank" rel="noopener noreferrer" aria-label="Mở video trên Douyin">↗</a>{% endif %}
+  </article>
+  {% endfor %}
 </div>
 {% endif %}

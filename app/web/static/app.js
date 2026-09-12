@@ -8,8 +8,20 @@ async function pollProgress() {
     const detail = document.getElementById("crawler-detail");
     const text = document.getElementById("progress-text");
     const errorBox = document.getElementById("progress-error");
-    if (badge) badge.textContent = data.status || "idle";
-    if (status) status.textContent = data.status || "idle";
+    const statusLabels = {
+      idle: "Sẵn sàng",
+      running: "Đang chạy",
+      success: "Hoàn tất",
+      completed: "Hoàn tất",
+      failed: "Có lỗi",
+      error: "Có lỗi",
+    };
+    const statusLabel = statusLabels[data.status] || data.status || "Sẵn sàng";
+    if (badge) {
+      badge.textContent = statusLabel;
+      badge.classList.toggle("is-running", Boolean(data.running));
+    }
+    if (status) status.textContent = data.running ? "Đang thu thập dữ liệu" : "Hệ thống sẵn sàng";
     if (detail) {
       detail.textContent = data.running
         ? `Từ khóa: ${data.current_keyword || "..."}`
