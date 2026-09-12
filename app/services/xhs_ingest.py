@@ -17,6 +17,14 @@ from app.xhs.schemas import XhsIngestPayload
 logger = logging.getLogger(__name__)
 
 
+def _naive_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        return value.replace(tzinfo=None)
+    return value
+
+
 @dataclass
 class XhsIngestResult:
     ok: bool
@@ -184,7 +192,7 @@ def ingest_xhs_payload(db: Session, payload: XhsIngestPayload) -> XhsIngestResul
         run = XhsCrawlRun(
             client_run_id=payload.client_run_id,
             status="running",
-            started_at=payload.started_at or datetime.utcnow(),
+            started_at=_naive_utc(payload.started_at) or datetime.utcnow(),
             source_filename=(payload.source_filename or "")[:255],
             keyword_count=len(payload.keywords),
         )
@@ -193,11 +201,11 @@ def ingest_xhs_payload(db: Session, payload: XhsIngestPayload) -> XhsIngestResul
     else:
         run.status = "running"
         run.error_message = None
-        run.started_at = payload.started_at or run.started_at
+        run.started_at = _naive_utc(payload.started_at) or run.started_at
         run.source_filename = (payload.source_filename or run.source_filename or "")[:255]
         run.keyword_count = len(payload.keywords)
 
-    captured_at = payload.finished_at or datetime.utcnow()
+    captured_at = _naive_utc(payload.finished_at) or datetime.utcnow()
     weights = _trend_weights(db)
     seen_ids: set[str] = set()
     received = 0

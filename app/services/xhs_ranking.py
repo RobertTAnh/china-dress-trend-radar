@@ -24,11 +24,20 @@ def _log_count_score(count: int | None, scale: float = 5.0) -> float:
     return _clamp((math.log10(count + 1) / scale) * 100.0)
 
 
+def _naive_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        return value.replace(tzinfo=None)
+    return value
+
+
 def _freshness_score(published_at: datetime | None, now: datetime | None = None) -> float:
-    current = now or datetime.utcnow()
-    if published_at is None:
+    current = _naive_utc(now) or datetime.utcnow()
+    published = _naive_utc(published_at)
+    if published is None:
         return 40.0
-    age = current - published_at
+    age = current - published
     if age <= timedelta(days=7):
         return 100.0
     if age <= timedelta(days=30):
