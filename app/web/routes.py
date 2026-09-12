@@ -426,14 +426,64 @@ def update_product_keyword(
     vietnamese_meaning: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    from app.models import Product, ProductCrawlRun, ProductKeywordLink
+
     row = db.get(ProductKeyword, keyword_id)
     if not row:
         return _redirect("/products/keywords", error="Không tìm thấy từ khóa.")
-    row.keyword = keyword.strip()
+
+    word = keyword.strip()
+    if not word:
+        return _redirect("/products/keywords", error="Từ khóa không được trống.")
+    duplicate = (
+        db.query(ProductKeyword)
+        .filter(ProductKeyword.keyword == word, ProductKeyword.id != keyword_id)
+        .one_or_none()
+    )
+    if duplicate:
+        return _redirect("/products/keywords", error="Từ khóa đã tồn tại.")
+
+    keyword_changed = word != row.keyword
+    if keyword_changed:
+        linked_product_ids = [
+            product_id
+            for (product_id,) in (
+                db.query(ProductKeywordLink.product_id)
+                .filter(ProductKeywordLink.keyword_id == keyword_id)
+                .all()
+            )
+        ]
+        db.query(ProductKeywordLink).filter(
+            ProductKeywordLink.keyword_id == keyword_id
+        ).delete(synchronize_session=False)
+        db.query(ProductCrawlRun).filter(
+            ProductCrawlRun.keyword_id == keyword_id
+        ).update({ProductCrawlRun.keyword_id: None}, synchronize_session="fetch")
+        db.flush()
+
+        # Products shared by another keyword must remain. Products that only
+        # belonged to the replaced keyword are stale and should disappear from
+        # the unfiltered product list as well.
+        if linked_product_ids:
+            orphaned = (
+                db.query(Product)
+                .filter(Product.id.in_(linked_product_ids))
+                .filter(~Product.keywords.any())
+                .all()
+            )
+            for product in orphaned:
+                db.delete(product)
+
+    row.keyword = word
     row.vietnamese_meaning = vietnamese_meaning.strip()
     row.updated_at = datetime.utcnow()
     db.commit()
-    return _redirect("/products/keywords", message="Đã cập nhật từ khóa sản phẩm.")
+    message = (
+        "Đã thay từ khóa và làm sạch dữ liệu crawl cũ."
+        if keyword_changed
+        else "Đã cập nhật từ khóa sản phẩm."
+    )
+    return _redirect("/products/keywords", message=message)
 
 
 @router.post("/products/keywords/{keyword_id}/toggle")

@@ -23,7 +23,13 @@ from app.apify.normalizer import (
 )
 from app.config import Settings
 from app.logging_utils import RedactFilter, redact_secrets
-from app.models import Product, ProductKeyword, ProductSnapshot
+from app.models import (
+    Product,
+    ProductCrawlRun,
+    ProductKeyword,
+    ProductKeywordLink,
+    ProductSnapshot,
+)
 from app.services.product_budget import ProductBudgetGuard
 from app.services.product_crawler import (
     ProductCrawlBlocked,
@@ -32,6 +38,7 @@ from app.services.product_crawler import (
 )
 from app.services.product_ranking import rank_product
 from app.services.product_relevance import product_relevance
+from app.web.routes import update_product_keyword
 
 
 @pytest.mark.asyncio
@@ -192,6 +199,67 @@ def test_upsert_dedupe_and_growth():
     assert snap2.sales_growth_absolute == 1300
     assert db.query(Product).count() == 1
     assert db.query(ProductSnapshot).count() == 2
+
+
+def test_renaming_product_keyword_clears_stale_results_and_detaches_runs():
+    db = make_session()
+    keywords = db.query(ProductKeyword).order_by(ProductKeyword.id).limit(2).all()
+    old_keyword, other_keyword = keywords
+
+    stale = Product(platform="douyin", external_product_id="stale", title="stale")
+    shared = Product(platform="douyin", external_product_id="shared", title="shared")
+    db.add_all([stale, shared])
+    db.flush()
+    db.add_all(
+        [
+            ProductKeywordLink(product_id=stale.id, keyword_id=old_keyword.id),
+            ProductKeywordLink(product_id=shared.id, keyword_id=old_keyword.id),
+            ProductKeywordLink(product_id=shared.id, keyword_id=other_keyword.id),
+        ]
+    )
+    run = ProductCrawlRun(keyword_id=old_keyword.id, status="success")
+    db.add(run)
+    db.commit()
+
+    update_product_keyword(
+        old_keyword.id,
+        keyword="新关键词",
+        vietnamese_meaning="Từ khóa mới",
+        db=db,
+    )
+
+    assert db.get(ProductKeyword, old_keyword.id).keyword == "新关键词"
+    assert (
+        db.query(ProductKeywordLink)
+        .filter(ProductKeywordLink.keyword_id == old_keyword.id)
+        .count()
+        == 0
+    )
+    assert db.query(Product).filter(Product.external_product_id == "stale").count() == 0
+    assert db.query(Product).filter(Product.external_product_id == "shared").count() == 1
+    assert db.get(ProductCrawlRun, run.id).keyword_id is None
+
+
+def test_editing_only_product_keyword_meaning_keeps_existing_results():
+    db = make_session()
+    keyword = db.query(ProductKeyword).first()
+    product = Product(platform="douyin", external_product_id="kept", title="kept")
+    db.add(product)
+    db.flush()
+    db.add(ProductKeywordLink(product_id=product.id, keyword_id=keyword.id))
+    run = ProductCrawlRun(keyword_id=keyword.id, status="success")
+    db.add(run)
+    db.commit()
+
+    update_product_keyword(
+        keyword.id,
+        keyword=keyword.keyword,
+        vietnamese_meaning="Nghĩa mới",
+        db=db,
+    )
+
+    assert db.query(ProductKeywordLink).filter_by(keyword_id=keyword.id).count() == 1
+    assert db.get(ProductCrawlRun, run.id).keyword_id == keyword.id
 
 
 @pytest.mark.asyncio
