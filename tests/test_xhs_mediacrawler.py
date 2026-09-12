@@ -32,7 +32,7 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
     assert "XHS_INTERNATIONAL = True" in base_config
 
 
-def test_patch_adds_server_side_video_filter(tmp_path: Path) -> None:
+def test_patch_adds_server_side_all_content_filter(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "base_config.py").write_text("XHS_INTERNATIONAL = False\n", encoding="utf-8")
@@ -49,4 +49,4 @@ def test_patch_adds_server_side_video_filter(tmp_path: Path) -> None:
     patched = core.read_text(encoding="utf-8")
 
     assert "SearchSortType, SearchNoteType" in patched
-    assert "note_type=SearchNoteType.VIDEO" in patched
+    assert "note_type=SearchNoteType.ALL" in patched

@@ -148,7 +148,6 @@ def main() -> None:
                 max_results=max_results,
                 client_run_id=f"{client_run_id}-{keyword}",
                 international=bool(config.get("xhs_international", True)),
-                media_type="video",
                 max_age_days=7,
             )
             parts.append(part)

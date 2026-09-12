@@ -88,9 +88,9 @@ Lịch: Chủ nhật 09:00, chạy bù khi máy vừa bật, không chạy hai t
 Mặc định tool dùng `rednote.com` (`XHS_INTERNATIONAL=true`), đúng với giao diện RedNote
 quốc tế. Chỉ đặt `false` nếu tài khoản của bạn thực sự dùng được bản Xiaohongshu Trung Quốc.
 
-Lượt chạy hàng tuần dùng bộ lọc: nhiều lượt thích nhất, chỉ video, đăng trong 7 ngày,
-không giới hạn phạm vi và vị trí. RedNote lọc loại video ngay khi tìm kiếm; tool kiểm tra
-lại loại bài và ngày đăng trước khi upload.
+Lượt chạy hàng tuần dùng bộ lọc: nhiều lượt thích nhất, lấy cả video và bài ảnh, đăng
+trong 7 ngày, không giới hạn phạm vi và vị trí. Tool giữ trường loại bài để giao diện
+phân biệt ảnh/video và kiểm tra lại ngày đăng trước khi upload.
 
 Nếu log báo `tài khoản không có quyền dùng tìm kiếm web`, QR và crawler đã hoạt động
 nhưng Xiaohongshu đang giới hạn tài khoản đó trên website. Hãy thử tìm trực tiếp trên
