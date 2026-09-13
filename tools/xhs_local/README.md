@@ -109,9 +109,9 @@ nhập hoặc cần xử lý QR/captcha.
 Mặc định tool dùng `rednote.com` (`XHS_INTERNATIONAL=true`), đúng với giao diện RedNote
 quốc tế. Chỉ đặt `false` nếu tài khoản của bạn thực sự dùng được bản Xiaohongshu Trung Quốc.
 
-Lượt chạy hàng tuần dùng bộ lọc: nhiều lượt thích nhất, lấy cả video và bài ảnh, đăng
-trong 7 ngày, không giới hạn phạm vi và vị trí. Tool giữ trường loại bài để giao diện
-phân biệt ảnh/video và kiểm tra lại ngày đăng trước khi upload.
+Lượt chạy hàng tuần lấy bài mới nhất trước, gồm cả video và bài ảnh, rồi chỉ giữ bài
+đăng trong 7 ngày. Các bài mới được xếp hạng lại theo lượt thích, lượt lưu và độ phù
+hợp với Tisora. Tool giữ trường loại bài để giao diện phân biệt ảnh/video.
 
 Mặc định chạy 8 từ khóa, tối đa 20 bài/từ khóa. Tool nghỉ ngẫu nhiên 7–9 phút giữa
 hai từ khóa (trung bình khoảng 8 phút). Nếu RedNote trả captcha/mã 461, toàn bộ lượt

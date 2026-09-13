@@ -23,7 +23,7 @@ def test_permission_error_is_detected_separately_from_successful_login() -> None
     assert detect_session_issue(output) is False
 
 
-def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
+def test_patch_uses_latest_xhs_sort(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "base_config.py").write_text(
@@ -35,7 +35,7 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
 
     patch_mediacrawler_config(tmp_path, 25)
 
-    assert 'SORT_TYPE = "popularity_descending"' in xhs_config.read_text(encoding="utf-8")
+    assert 'SORT_TYPE = "time_descending"' in xhs_config.read_text(encoding="utf-8")
     base_config = (config_dir / "base_config.py").read_text(encoding="utf-8")
     assert "ENABLE_GET_COMMENTS = False" in base_config
     assert "CRAWLER_MAX_NOTES_COUNT = 25" in base_config

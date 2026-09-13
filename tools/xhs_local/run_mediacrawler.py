@@ -105,9 +105,8 @@ def patch_mediacrawler_config(
             lines.append(line)
     config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    # The popularity sort can be unavailable to some otherwise valid web
-    # accounts. General search is the least restrictive mode and is sufficient
-    # because this project scores/ranks the returned notes itself.
+    # Fetch newest notes first so the 7-day post-filter has enough candidates.
+    # Engagement is still used later by this project to rank those fresh notes.
     xhs_config_path = root / "config" / "xhs_config.py"
     if xhs_config_path.exists():
         xhs_text = xhs_config_path.read_text(encoding="utf-8")
@@ -115,12 +114,12 @@ def patch_mediacrawler_config(
         for line in xhs_text.splitlines():
             if line.strip().startswith("SORT_TYPE") and "=" in line:
                 indent = line[: len(line) - len(line.lstrip())]
-                xhs_lines.append(f'{indent}SORT_TYPE = "popularity_descending"')
+                xhs_lines.append(f'{indent}SORT_TYPE = "time_descending"')
             else:
                 xhs_lines.append(line)
         xhs_config_path.write_text("\n".join(xhs_lines) + "\n", encoding="utf-8")
     logger.info(
-        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=most_liked, type=all, site=%s headless=%s",
+        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=latest, type=all, site=%s headless=%s",
         max_notes,
         "rednote.com" if international else "xiaohongshu.com",
         headless,
