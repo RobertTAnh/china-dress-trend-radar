@@ -349,6 +349,30 @@ def request_xhs_crawl(db: Session = Depends(get_db)):
     return _redirect("/xhs", message="Đã gửi yêu cầu tìm kiếm tới máy tính của bạn.")
 
 
+@router.post("/xhs/crawl/cancel")
+def cancel_xhs_crawl(db: Session = Depends(get_db)):
+    state = _get_remote_state(db)
+    status = state.get("status")
+    if status == "queued":
+        state.update(
+            status="cancelled",
+            stage="cancelled",
+            message="Đã hủy lượt tìm trước khi bắt đầu",
+            finished_at=datetime.utcnow().isoformat(),
+        )
+    elif status in {"running", "waiting"}:
+        state.update(
+            status="cancelling",
+            stage="cancelling",
+            message="Đang dừng an toàn và lưu kết quả đã thu được",
+            next_keyword_at=None,
+        )
+    else:
+        return _redirect("/xhs", message="Không có lượt RedNote nào đang chạy.")
+    _save_remote_state(db, state)
+    return _redirect("/xhs", message="Đã gửi yêu cầu dừng.")
+
+
 @router.post("/xhs/login/request")
 def request_xhs_login(db: Session = Depends(get_db)):
     current = _get_remote_state(db)

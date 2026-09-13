@@ -23,6 +23,10 @@ LOCK_FILE = PROJECT_ROOT / "data" / "xhs_outbox" / ".xhs_local.lock"
 CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
 
 
+class CrawlCancelled(Exception):
+    pass
+
+
 def load_config() -> dict:
     data = {}
     if CONFIG_PATH.exists():
@@ -82,6 +86,35 @@ def report_remote_progress(config: dict, **fields) -> None:
         response.raise_for_status()
     except Exception as exc:
         logger.warning("Không gửi được tiến độ RedNote: %s", exc)
+
+
+def cancel_requested(config: dict) -> bool:
+    job_id = (os.getenv("XHS_REMOTE_JOB_ID") or "").strip()
+    railway_url = (config.get("railway_url") or "").rstrip("/")
+    if not job_id or not railway_url:
+        return False
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            state = client.get(railway_url + "/api/xhs/crawl/status").json()
+        return state.get("job_id") == job_id and state.get("status") == "cancelling"
+    except Exception as exc:
+        logger.warning("Không kiểm tra được lệnh dừng RedNote: %s", exc)
+        return False
+
+
+def ensure_not_cancelled(config: dict) -> None:
+    if cancel_requested(config):
+        raise CrawlCancelled()
+
+
+def cancellable_wait(config: dict, seconds: int) -> None:
+    deadline = time.monotonic() + seconds
+    while True:
+        ensure_not_cancelled(config)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(5, remaining))
 
 
 def resolve_mediacrawler_python(mc_root: Path, configured: str = "") -> Path:
@@ -173,24 +206,25 @@ def main() -> None:
         client_run_id = started.strftime("xhs-%Y-%m-%d-%H%M%S")
         parts: list[Path] = []
         total_accepted = 0
-        for keyword_index, item in enumerate(keywords):
-            keyword = item.get("keyword")
-            if not keyword:
-                continue
-            max_results = min(int(item.get("max_results") or 30), 30)
-            report_remote_progress(
-                config,
-                status="running",
-                stage="searching",
-                message=f"Đang tìm từ khóa {keyword_index + 1}/{len(keywords)}",
-                keyword=keyword,
-                keyword_index=keyword_index + 1,
-                keyword_total=len(keywords),
-                accepted_count=total_accepted,
-                next_keyword_at=None,
-            )
-            search_started_at = datetime.now(timezone.utc)
-            try:
+        try:
+            for keyword_index, item in enumerate(keywords):
+                ensure_not_cancelled(config)
+                keyword = item.get("keyword")
+                if not keyword:
+                    continue
+                max_results = min(int(item.get("max_results") or 30), 30)
+                report_remote_progress(
+                    config,
+                    status="running",
+                    stage="searching",
+                    message=f"Đang tìm từ khóa {keyword_index + 1}/{len(keywords)}",
+                    keyword=keyword,
+                    keyword_index=keyword_index + 1,
+                    keyword_total=len(keywords),
+                    accepted_count=total_accepted,
+                    next_keyword_at=None,
+                )
+                search_started_at = datetime.now(timezone.utc)
                 run_search(
                     mc_root,
                     keyword,
@@ -198,51 +232,59 @@ def main() -> None:
                     str(mc_python),
                     international=bool(config.get("xhs_international", True)),
                 )
-            except SystemExit:
-                raise
-            except Exception as exc:
-                logger.error("MediaCrawler lỗi keyword=%s: %s", keyword, exc)
-                raise
-            source = default_data_dir(mc_root)
-            part = import_sources(
-                source,
-                keyword,
-                max_results=max_results,
-                client_run_id=f"{client_run_id}-{keyword}",
-                international=bool(config.get("xhs_international", True)),
-                not_before=search_started_at,
-            )
-            parts.append(part)
-            part_data = json.loads(part.read_text(encoding="utf-8"))
-            part_count = sum(len(batch.get("items") or []) for batch in part_data.get("keywords") or [])
-            total_accepted += part_count
-            report_remote_progress(
-                config,
-                status="running",
-                stage="keyword_done",
-                message=f"Xong từ khóa {keyword_index + 1}/{len(keywords)} · giữ {part_count} bài",
-                keyword=keyword,
-                keyword_index=keyword_index + 1,
-                keyword_total=len(keywords),
-                accepted_count=total_accepted,
-            )
-            if keyword_index < len(keywords) - 1:
-                delay = keyword_delay_seconds(config)
-                logger.info(
-                    "Nghỉ %s giây (%.1f phút) trước từ khóa tiếp theo để giảm tải RedNote.",
-                    delay,
-                    delay / 60,
+                ensure_not_cancelled(config)
+                source = default_data_dir(mc_root)
+                part = import_sources(
+                    source,
+                    keyword,
+                    max_results=max_results,
+                    client_run_id=f"{client_run_id}-{keyword}",
+                    international=bool(config.get("xhs_international", True)),
+                    not_before=search_started_at,
                 )
-                next_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                parts.append(part)
+                part_data = json.loads(part.read_text(encoding="utf-8"))
+                part_count = sum(len(batch.get("items") or []) for batch in part_data.get("keywords") or [])
+                total_accepted += part_count
                 report_remote_progress(
                     config,
-                    status="waiting",
-                    stage="waiting",
-                    message=f"Đang nghỉ {delay / 60:.1f} phút trước từ khóa tiếp theo",
-                    next_keyword_at=next_at.isoformat(),
+                    status="running",
+                    stage="keyword_done",
+                    message=f"Xong từ khóa {keyword_index + 1}/{len(keywords)} · giữ {part_count} bài",
+                    keyword=keyword,
+                    keyword_index=keyword_index + 1,
+                    keyword_total=len(keywords),
                     accepted_count=total_accepted,
                 )
-                time.sleep(delay)
+                if keyword_index < len(keywords) - 1:
+                    delay = keyword_delay_seconds(config)
+                    logger.info("Nghỉ %s giây (%.1f phút) trước từ khóa tiếp theo để giảm tải RedNote.", delay, delay / 60)
+                    next_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                    report_remote_progress(
+                        config,
+                        status="waiting",
+                        stage="waiting",
+                        message=f"Đang nghỉ {delay / 60:.1f} phút trước từ khóa tiếp theo",
+                        next_keyword_at=next_at.isoformat(),
+                        accepted_count=total_accepted,
+                    )
+                    cancellable_wait(config, delay)
+        except CrawlCancelled:
+            if parts and railway_url and token:
+                payload_path = merge_keyword_payloads(parts, client_run_id + "-cancelled")
+                upload_file(payload_path, railway_url, token)
+            finished = datetime.now(timezone.utc)
+            report_remote_progress(
+                config,
+                status="cancelled",
+                stage="cancelled",
+                message=f"Đã dừng · giữ {total_accepted} bài đã thu được",
+                accepted_count=total_accepted,
+                next_keyword_at=None,
+                finished_at=finished.isoformat(),
+            )
+            logger.info("Đã dừng crawl theo yêu cầu người dùng; giữ %s bài", total_accepted)
+            return
 
         payload_path = merge_keyword_payloads(parts, client_run_id)
         if not railway_url or not token:

@@ -3,9 +3,14 @@
 {% block content %}
 <section class="page-hero xhs-hero">
   <div><div class="eyebrow">REDNOTE DISCOVERY</div><h1>Xu hướng RedNote</h1><p>Tìm ảnh và video đầm tiệc phù hợp với phong cách Tisora.</p></div>
-  <form method="post" action="/xhs/crawl/request">
-    <button id="xhs-search-button" class="btn btn-accent btn-lg" type="submit" {% if xhs_crawl.status in ['queued','running','waiting'] %}disabled{% endif %}>⌕ Tìm ngay</button>
-  </form>
+  <div class="hero-actions">
+    <form method="post" action="/xhs/crawl/request">
+      <button id="xhs-search-button" class="btn btn-accent btn-lg" type="submit" {% if xhs_crawl.status in ['queued','running','waiting','cancelling'] %}disabled{% endif %}>⌕ Tìm ngay</button>
+    </form>
+    <form id="xhs-stop-form" method="post" action="/xhs/crawl/cancel" {% if xhs_crawl.status not in ['queued','running','waiting','cancelling'] %}hidden{% endif %}>
+      <button id="xhs-stop-button" class="btn btn-outline-danger btn-lg" type="submit" {% if xhs_crawl.status == 'cancelling' %}disabled{% endif %}>Dừng</button>
+    </form>
+  </div>
 </section>
 
 <section id="xhs-crawl-progress" class="xhs-progress" data-status="{{ xhs_crawl.status }}">
@@ -130,7 +135,7 @@
 {% block scripts %}
 <script>
 (() => {
-  const active = new Set(["queued", "running", "waiting"]);
+  const active = new Set(["queued", "running", "waiting", "cancelling"]);
   const panel = document.getElementById("xhs-crawl-progress");
   const button = document.getElementById("xhs-search-button");
   const title = document.getElementById("xhs-progress-title");
@@ -140,6 +145,8 @@
   const accepted = document.getElementById("xhs-accepted-count");
   const next = document.getElementById("xhs-next-time");
   const loginForm = document.getElementById("xhs-login-form");
+  const stopForm = document.getElementById("xhs-stop-form");
+  const stopButton = document.getElementById("xhs-stop-button");
   function render(data) {
     panel.dataset.status = data.status || "idle";
     title.textContent = data.message || "Sẵn sàng tìm kiếm";
@@ -149,6 +156,8 @@
     keyword.textContent = data.keyword ? `Đang xử lý: ${data.keyword}` : (data.status === "queued" ? "Đang chờ máy tính nhận lệnh" : "Máy tính sẽ kiểm tra yêu cầu mỗi phút");
     accepted.textContent = `Đã giữ ${Number(data.accepted_count || 0)} bài`;
     button.disabled = active.has(data.status);
+    stopForm.hidden = !active.has(data.status);
+    stopButton.disabled = data.status === "cancelling";
     loginForm.hidden = data.status !== "needs_login";
     if (data.next_keyword_at && data.status === "waiting") {
       const seconds = Math.max(0, Math.ceil((new Date(data.next_keyword_at) - new Date()) / 1000));

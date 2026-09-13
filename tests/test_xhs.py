@@ -239,6 +239,22 @@ def test_remote_login_request_is_claimed_as_login_action(monkeypatch):
     assert claimed["action"] == "login"
 
 
+def test_remote_crawl_can_be_cancelled(monkeypatch):
+    db = make_session()
+    client = _test_app(db, monkeypatch)
+    client.post("/xhs/crawl/request")
+    client.post(
+        "/api/xhs/crawl/claim",
+        headers={"Authorization": "Bearer secret-ingest-token"},
+    )
+
+    response = client.post("/xhs/crawl/cancel", follow_redirects=False)
+
+    assert response.status_code == 303
+    state = client.get("/api/xhs/crawl/status").json()
+    assert state["status"] == "cancelling"
+
+
 def test_ingest_token_not_logged(caplog, monkeypatch):
     from app.services.xhs_ingest import XhsIngestResult
 
