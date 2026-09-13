@@ -45,6 +45,7 @@ def main() -> None:
         1,
         str(python_exe),
         international=bool(config.get("xhs_international", True)),
+        headless=False,
     )
     report(
         config,

@@ -66,7 +66,13 @@ def detect_login_failure(text: str) -> bool:
     return any(hint in lowered for hint in LOGIN_FAILURE_HINTS)
 
 
-def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = True) -> None:
+def patch_mediacrawler_config(
+    root: Path,
+    max_notes: int,
+    international: bool = True,
+    *,
+    headless: bool = True,
+) -> None:
     config_path = root / "config" / "base_config.py"
     if not config_path.exists():
         logger.warning("Không thấy %s — bỏ qua patch config.", config_path)
@@ -80,7 +86,7 @@ def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = 
         "ENABLE_GET_IMAGES": "ENABLE_GET_IMAGES = False",
         "SAVE_LOGIN_STATE": "SAVE_LOGIN_STATE = True",
         "ENABLE_SAVE_LOGIN_STATE": "ENABLE_SAVE_LOGIN_STATE = True",
-        "HEADLESS": "HEADLESS = False",
+        "HEADLESS": f"HEADLESS = {headless}",
         "XHS_INTERNATIONAL": f"XHS_INTERNATIONAL = {international}",
         "CRAWLER_MAX_NOTES_COUNT": f"CRAWLER_MAX_NOTES_COUNT = {max_notes}",
         "CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES": "CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 0",
@@ -114,9 +120,10 @@ def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = 
                 xhs_lines.append(line)
         xhs_config_path.write_text("\n".join(xhs_lines) + "\n", encoding="utf-8")
     logger.info(
-        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=most_liked, type=all, site=%s",
+        "Patched MediaCrawler config: comments off, media off, max_notes=%s, sort=most_liked, type=all, site=%s headless=%s",
         max_notes,
         "rednote.com" if international else "xiaohongshu.com",
+        headless,
     )
 
     # Explicitly use RedNote's "All" content filter so both image notes and
@@ -151,8 +158,10 @@ def run_search(
     python_exe: str,
     login_type: str = "qrcode",
     international: bool = True,
+    *,
+    headless: bool = True,
 ) -> int:
-    patch_mediacrawler_config(root, max_notes, international)
+    patch_mediacrawler_config(root, max_notes, international, headless=headless)
     main_py = root / "main.py"
     if not main_py.exists():
         raise FileNotFoundError(f"Không thấy main.py trong {root}")

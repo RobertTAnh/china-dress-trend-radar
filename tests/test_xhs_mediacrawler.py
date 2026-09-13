@@ -27,7 +27,7 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "base_config.py").write_text(
-        "ENABLE_GET_COMMENTS = True\nCRAWLER_MAX_NOTES_COUNT = 10\nXHS_INTERNATIONAL = False\n",
+        "ENABLE_GET_COMMENTS = True\nCRAWLER_MAX_NOTES_COUNT = 10\nXHS_INTERNATIONAL = False\nHEADLESS = False\n",
         encoding="utf-8",
     )
     xhs_config = config_dir / "xhs_config.py"
@@ -40,6 +40,20 @@ def test_patch_uses_general_xhs_sort(tmp_path: Path) -> None:
     assert "ENABLE_GET_COMMENTS = False" in base_config
     assert "CRAWLER_MAX_NOTES_COUNT = 25" in base_config
     assert "XHS_INTERNATIONAL = True" in base_config
+    assert "HEADLESS = True" in base_config
+
+
+def test_login_mode_keeps_browser_visible(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    base = config_dir / "base_config.py"
+    base.write_text("HEADLESS = True\nSAVE_LOGIN_STATE = False\n", encoding="utf-8")
+
+    patch_mediacrawler_config(tmp_path, 1, headless=False)
+
+    patched = base.read_text(encoding="utf-8")
+    assert "HEADLESS = False" in patched
+    assert "SAVE_LOGIN_STATE = True" in patched
 
 
 def test_patch_adds_server_side_all_content_filter(tmp_path: Path) -> None:

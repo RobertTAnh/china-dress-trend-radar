@@ -95,6 +95,10 @@ nhập**. Nút này mở trình duyệt MediaCrawler trên máy; quét QR trong 
 bấm **Tìm ngay** lại. Tool chỉ đọc file được tạo sau khi từng từ khóa bắt đầu nên không
 thể nhập nhầm kết quả cũ khi đăng nhập thất bại.
 
+Các lượt tìm thông thường chạy trình duyệt ẩn và dùng lại phiên đăng nhập đã lưu. Vì
+vậy 8 từ khóa không bật 8 cửa sổ Chrome; cửa sổ chỉ hiện khi bạn chủ động bấm nút đăng
+nhập hoặc cần xử lý QR/captcha.
+
 ## 7. Khi cookie / QR hết hạn
 
 1. Mở thư mục MediaCrawler.
