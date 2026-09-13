@@ -107,7 +107,7 @@ def xhs_page(
     sort: str = "trend_score",
     db: Session = Depends(get_db),
 ):
-    if days not in (7, 30):
+    if days not in (0, 7, 30):
         days = 7
     if sort not in ("trend_score", "collect", "published_at"):
         sort = "trend_score"

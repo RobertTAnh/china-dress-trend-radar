@@ -268,25 +268,6 @@ def ingest_xhs_payload(db: Session, payload: XhsIngestPayload) -> XhsIngestResul
                     normalized.description,
                     normalized.author_name,
                 )
-                if not relevance.accepted:
-                    rejected += 1
-                    reasons.append(
-                        {
-                            "keyword": batch.keyword,
-                            "external_post_id": normalized.external_post_id,
-                            "title": (normalized.title or "")[:80],
-                            "reason": "; ".join(relevance.rejection_reasons or relevance.reasons),
-                            "matched_negative_terms": relevance.matched_negative_terms,
-                        }
-                    )
-                    logger.info(
-                        "XHS reject id=%s title=%s reasons=%s",
-                        normalized.external_post_id,
-                        (normalized.title or "")[:80],
-                        "; ".join(relevance.rejection_reasons or relevance.reasons),
-                    )
-                    continue
-
                 previous = (
                     db.query(XhsPost)
                     .filter(XhsPost.external_post_id == normalized.external_post_id)

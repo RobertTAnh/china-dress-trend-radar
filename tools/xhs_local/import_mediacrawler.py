@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -76,7 +76,7 @@ def import_sources(
     for path in files:
         raw_items.extend(_load_json_file(path))
 
-    accepted_items: list[dict] = []
+    retained_items: list[dict] = []
     rejected = 0
     seen: set[str] = set()
     keyword_items = [
@@ -105,16 +105,6 @@ def import_sources(
                 media_type,
             )
             continue
-        if max_age_days is not None:
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=max_age_days)
-            if normalized.published_at is None or normalized.published_at < cutoff:
-                rejected += 1
-                logger.info(
-                    "Import reject position=%s reason=Bài cũ hơn %s ngày hoặc thiếu ngày đăng",
-                    index,
-                    max_age_days,
-                )
-                continue
         if normalized.external_post_id in seen:
             continue
         seen.add(normalized.external_post_id)
@@ -134,11 +124,8 @@ def import_sources(
             relevance.accepted,
             "; ".join(relevance.reasons),
         )
-        if not relevance.accepted:
-            rejected += 1
-            continue
-        accepted_items.append(raw)
-        if len(accepted_items) >= max_results:
+        retained_items.append(raw)
+        if len(retained_items) >= max_results:
             break
 
     run_id = client_run_id or datetime.now(timezone.utc).strftime("xhs-%Y-%m-%d-%H%M%S")
@@ -148,7 +135,7 @@ def import_sources(
         "started_at": datetime.now(timezone.utc).isoformat(),
         "finished_at": datetime.now(timezone.utc).isoformat(),
         "source_filename": str(source_dir),
-        "keywords": [{"keyword": keyword, "items": accepted_items[:max_results]}],
+        "keywords": [{"keyword": keyword, "items": retained_items[:max_results]}],
     }
     out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(
@@ -156,7 +143,7 @@ def import_sources(
         keyword,
         len(files),
         len(keyword_items),
-        len(accepted_items),
+        len(retained_items),
         rejected,
         out_path,
     )

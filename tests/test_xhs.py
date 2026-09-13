@@ -140,9 +140,10 @@ def test_ingest_dedupe_limit_and_idempotent():
     assert first.ok
     assert first.received_count == 30
     assert first.accepted_count >= 1
-    assert first.rejected_count >= 1
+    assert first.rejected_count == 0
     assert db.query(XhsPost).filter(XhsPost.external_post_id == "keep-1").count() == 1
-    assert db.query(XhsPost).filter(XhsPost.external_post_id == "kids-1").count() == 0
+    kids_post = db.query(XhsPost).filter(XhsPost.external_post_id == "kids-1").one()
+    assert kids_post.snapshots[-1].trend_label == "không phù hợp"
 
     second = ingest_xhs_payload(db, payload)
     assert second.ok

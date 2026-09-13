@@ -110,8 +110,9 @@ Mặc định tool dùng `rednote.com` (`XHS_INTERNATIONAL=true`), đúng với 
 quốc tế. Chỉ đặt `false` nếu tài khoản của bạn thực sự dùng được bản Xiaohongshu Trung Quốc.
 
 Lượt chạy hàng tuần lấy bài mới nhất trước, gồm cả video và bài ảnh, rồi chỉ giữ bài
-đăng trong 7 ngày. Các bài mới được xếp hạng lại theo lượt thích, lượt lưu và độ phù
-hợp với Tisora. Tool giữ trường loại bài để giao diện phân biệt ảnh/video.
+trong kho dữ liệu, kể cả bài cũ hoặc chưa phù hợp. Bộ lọc 7/30 ngày và “Chỉ phù hợp”
+chỉ thay đổi danh sách hiển thị; chọn “Tất cả” để xem toàn bộ. Các bài được xếp hạng
+lại theo lượt thích, lượt lưu và độ phù hợp với Tisora.
 
 Mặc định chạy 8 từ khóa, tối đa 20 bài/từ khóa. Tool nghỉ ngẫu nhiên 7–9 phút giữa
 hai từ khóa (trung bình khoảng 8 phút). Nếu RedNote trả captcha/mã 461, toàn bộ lượt

@@ -210,7 +210,6 @@ def main() -> None:
                 max_results=max_results,
                 client_run_id=f"{client_run_id}-{keyword}",
                 international=bool(config.get("xhs_international", True)),
-                max_age_days=7,
                 not_before=search_started_at,
             )
             parts.append(part)
