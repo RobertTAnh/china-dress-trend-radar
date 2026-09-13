@@ -19,6 +19,10 @@
     <span id="xhs-accepted-count">Đã giữ {{ xhs_crawl.accepted_count or 0 }} bài</span>
     <span id="xhs-next-time"></span>
   </div>
+  <form id="xhs-login-form" method="post" action="/xhs/login/request" {% if xhs_crawl.status != 'needs_login' %}hidden{% endif %}>
+    <button class="btn btn-accent" type="submit">Mở Chrome để đăng nhập</button>
+    <span class="tiny">Quét QR trên cửa sổ vừa mở, sau đó bấm “Tìm ngay” lại.</span>
+  </form>
 </section>
 
 <form class="filter-bar row g-2 mb-3" method="get">
@@ -134,6 +138,7 @@
   const keyword = document.getElementById("xhs-current-keyword");
   const accepted = document.getElementById("xhs-accepted-count");
   const next = document.getElementById("xhs-next-time");
+  const loginForm = document.getElementById("xhs-login-form");
   function render(data) {
     panel.dataset.status = data.status || "idle";
     title.textContent = data.message || "Sẵn sàng tìm kiếm";
@@ -143,6 +148,7 @@
     keyword.textContent = data.keyword ? `Đang xử lý: ${data.keyword}` : (data.status === "queued" ? "Đang chờ máy tính nhận lệnh" : "Máy tính sẽ kiểm tra yêu cầu mỗi phút");
     accepted.textContent = `Đã giữ ${Number(data.accepted_count || 0)} bài`;
     button.disabled = active.has(data.status);
+    loginForm.hidden = data.status !== "needs_login";
     if (data.next_keyword_at && data.status === "waiting") {
       const seconds = Math.max(0, Math.ceil((new Date(data.next_keyword_at) - new Date()) / 1000));
       next.textContent = `Từ khóa tiếp theo sau ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2,"0")}`;

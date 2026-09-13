@@ -90,6 +90,10 @@ Sau đó, khi máy đang bật và bạn đã đăng nhập Windows, bộ nhận
 mỗi phút. Bấm “Tìm ngay” tại `/xhs` sẽ đưa yêu cầu vào hàng đợi; trang tự cập nhật từ
 khóa đang tìm, số từ khóa đã chạy, số bài phù hợp và thời gian nghỉ còn lại. Không cần
 mở website hay cửa sổ PowerShell, nhưng máy phải có mạng và phiên RedNote còn hiệu lực.
+Nếu phiên đăng nhập hết hạn, lượt tìm dừng ngay và trang hiện nút **Mở Chrome để đăng
+nhập**. Nút này mở trình duyệt MediaCrawler trên máy; quét QR trong vòng hai phút rồi
+bấm **Tìm ngay** lại. Tool chỉ đọc file được tạo sau khi từng từ khóa bắt đầu nên không
+thể nhập nhầm kết quả cũ khi đăng nhập thất bại.
 
 ## 7. Khi cookie / QR hết hạn
 

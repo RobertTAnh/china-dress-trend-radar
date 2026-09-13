@@ -189,6 +189,7 @@ def main() -> None:
                 accepted_count=total_accepted,
                 next_keyword_at=None,
             )
+            search_started_at = datetime.now(timezone.utc)
             try:
                 run_search(
                     mc_root,
@@ -210,6 +211,7 @@ def main() -> None:
                 client_run_id=f"{client_run_id}-{keyword}",
                 international=bool(config.get("xhs_international", True)),
                 max_age_days=7,
+                not_before=search_started_at,
             )
             parts.append(part)
             part_data = json.loads(part.read_text(encoding="utf-8"))

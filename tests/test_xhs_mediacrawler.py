@@ -2,10 +2,15 @@ from pathlib import Path
 
 from tools.xhs_local.run_mediacrawler import (
     detect_permission_issue,
+    detect_login_failure,
     detect_captcha_issue,
     detect_session_issue,
     patch_mediacrawler_config,
 )
+
+
+def test_failed_qr_is_detected_even_with_zero_exit_code() -> None:
+    assert detect_login_failure("Login xiaohongshu failed by qrcode login method")
 
 
 def test_captcha_461_is_detected_even_when_crawler_can_exit_zero() -> None:

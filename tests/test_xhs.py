@@ -212,6 +212,20 @@ def test_remote_crawl_request_claim_and_progress(monkeypatch):
     assert status["accepted_count"] == 6
 
 
+def test_remote_login_request_is_claimed_as_login_action(monkeypatch):
+    db = make_session()
+    client = _test_app(db, monkeypatch)
+    requested = client.post("/xhs/login/request", follow_redirects=False)
+    assert requested.status_code == 303
+    queued = client.get("/api/xhs/crawl/status").json()
+    assert queued["action"] == "login"
+    claimed = client.post(
+        "/api/xhs/crawl/claim",
+        headers={"Authorization": "Bearer secret-ingest-token"},
+    ).json()["job"]
+    assert claimed["action"] == "login"
+
+
 def test_ingest_token_not_logged(caplog, monkeypatch):
     from app.services.xhs_ingest import XhsIngestResult
 

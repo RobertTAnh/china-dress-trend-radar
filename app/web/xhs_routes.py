@@ -50,6 +50,7 @@ def _default_remote_state() -> dict:
         "keyword_index": 0,
         "keyword_total": 8,
         "accepted_count": 0,
+        "action": "crawl",
         "updated_at": datetime.utcnow().isoformat(),
     }
 
@@ -331,6 +332,26 @@ def request_xhs_crawl(db: Session = Depends(get_db)):
     )
     _save_remote_state(db, state)
     return _redirect("/xhs", message="Đã gửi yêu cầu tìm kiếm tới máy tính của bạn.")
+
+
+@router.post("/xhs/login/request")
+def request_xhs_login(db: Session = Depends(get_db)):
+    current = _get_remote_state(db)
+    if current.get("status") in {"queued", "running", "waiting"}:
+        return _redirect("/xhs", message="Đang có một tác vụ RedNote chạy trên máy tính.")
+    state = _default_remote_state()
+    state.update(
+        {
+            "job_id": f"xhs-login-{datetime.utcnow():%Y%m%d-%H%M%S}-{uuid4().hex[:6]}",
+            "action": "login",
+            "status": "queued",
+            "stage": "login_queued",
+            "message": "Đang chờ máy tính mở Chrome để đăng nhập",
+            "requested_at": datetime.utcnow().isoformat(),
+        }
+    )
+    _save_remote_state(db, state)
+    return _redirect("/xhs", message="Đã gửi lệnh mở Chrome tới máy tính.")
 
 
 @router.get("/api/xhs/crawl/status")

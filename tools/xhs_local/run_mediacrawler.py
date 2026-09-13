@@ -34,6 +34,13 @@ CAPTCHA_HINTS = (
     "461 unknown status",
 )
 
+LOGIN_FAILURE_HINTS = (
+    "login xiaohongshu failed",
+    "qrcode login failed",
+    "qr code login failed",
+    "waiting for scan code login, remaining time is 0",
+)
+
 
 def detect_session_issue(text: str) -> bool:
     lowered = text.lower()
@@ -52,6 +59,11 @@ def detect_permission_issue(text: str) -> bool:
 def detect_captcha_issue(text: str) -> bool:
     lowered = text.lower()
     return any(hint in lowered for hint in CAPTCHA_HINTS)
+
+
+def detect_login_failure(text: str) -> bool:
+    lowered = text.lower()
+    return any(hint in lowered for hint in LOGIN_FAILURE_HINTS)
 
 
 def patch_mediacrawler_config(root: Path, max_notes: int, international: bool = True) -> None:
@@ -178,7 +190,12 @@ def run_search(
             "kết quả thiếu; hãy xác minh thủ công trước lần chạy sau."
         )
         raise SystemExit(2)
-    if proc.returncode != 0 and detect_permission_issue(output):
+    if detect_login_failure(output):
+        logger.error(
+            "Đăng nhập RedNote thất bại hoặc QR đã hết hạn. Dừng ngay và không đọc dữ liệu cũ."
+        )
+        raise SystemExit(2)
+    if detect_permission_issue(output):
         logger.error(
             "Đã đăng nhập Xiaohongshu nhưng tài khoản không có quyền dùng tìm kiếm web. "
             "Hãy thử tìm kiếm trực tiếp trên website đang crawl bằng cùng tài khoản; nếu vẫn bị chặn, "

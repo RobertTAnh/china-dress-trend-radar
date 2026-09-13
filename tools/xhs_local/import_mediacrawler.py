@@ -65,9 +65,13 @@ def import_sources(
     international: bool = True,
     media_type: str | None = None,
     max_age_days: int | None = None,
+    not_before: datetime | None = None,
 ) -> Path:
     OUTBOX.mkdir(parents=True, exist_ok=True)
     files = collect_source_files(source_dir)
+    if not_before is not None:
+        cutoff_timestamp = not_before.timestamp()
+        files = [path for path in files if path.stat().st_mtime >= cutoff_timestamp]
     raw_items: list[dict] = []
     for path in files:
         raw_items.extend(_load_json_file(path))
