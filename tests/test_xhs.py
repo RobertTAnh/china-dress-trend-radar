@@ -178,6 +178,18 @@ def test_ingest_rejects_bad_token(monkeypatch):
     assert missing.status_code == 401
 
 
+def test_xhs_filters_accept_empty_numeric_fields(monkeypatch):
+    db = make_session()
+    client = _test_app(db, monkeypatch)
+
+    response = client.get(
+        "/xhs?days=0&keyword_id=&min_collect=&min_like=&sort=trend_score"
+    )
+
+    assert response.status_code == 200
+    assert "Tất cả" in response.text
+
+
 def test_remote_crawl_request_claim_and_progress(monkeypatch):
     db = make_session()
     client = _test_app(db, monkeypatch)

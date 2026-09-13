@@ -40,6 +40,18 @@ templates.env.filters["safe_url"] = safe_http_url
 templates.env.autoescape = True
 
 router = APIRouter()
+
+
+def _optional_int(value: str | int | None, *, minimum: int = 0) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= minimum else None
+
+
 def _default_remote_state() -> dict:
     return {
         "job_id": None,
@@ -100,10 +112,10 @@ def _check_ingest_token(request: Request) -> str | None:
 def xhs_page(
     request: Request,
     days: int = 7,
-    keyword_id: int | None = None,
+    keyword_id: str | None = None,
     only_relevant: int = 0,
-    min_collect: int | None = None,
-    min_like: int | None = None,
+    min_collect: str | None = None,
+    min_like: str | None = None,
     sort: str = "trend_score",
     db: Session = Depends(get_db),
 ):
@@ -111,13 +123,16 @@ def xhs_page(
         days = 7
     if sort not in ("trend_score", "collect", "published_at"):
         sort = "trend_score"
+    resolved_keyword_id = _optional_int(keyword_id, minimum=1)
+    resolved_min_collect = _optional_int(min_collect)
+    resolved_min_like = _optional_int(min_like)
     cards = load_xhs_cards(
         db,
         days=days,
-        keyword_id=keyword_id,
+        keyword_id=resolved_keyword_id,
         only_relevant=bool(only_relevant),
-        min_collect=min_collect,
-        min_like=min_like,
+        min_collect=resolved_min_collect,
+        min_like=resolved_min_like,
         sort=sort,
     )
     keywords = db.query(XhsKeyword).order_by(XhsKeyword.id).all()
@@ -130,10 +145,10 @@ def xhs_page(
                 "cards": cards,
                 "keywords": keywords,
                 "days": days,
-                "keyword_id": keyword_id,
+                "keyword_id": resolved_keyword_id,
                 "only_relevant": only_relevant,
-                "min_collect": min_collect,
-                "min_like": min_like,
+                "min_collect": resolved_min_collect,
+                "min_like": resolved_min_like,
                 "sort": sort,
                 "xhs_crawl": _get_remote_state(db),
             },
